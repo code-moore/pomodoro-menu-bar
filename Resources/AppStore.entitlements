@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the Mac App Store build. The App Store requires the sandbox;
+  calendar access is the only door through it the app needs. No network: the
+  App Store build has no updater and nothing else talks to a server.
+
+  build-appstore.sh adds the application and team identifiers on top of these
+  only when it embeds a provisioning profile. Without a profile those two stop
+  the app launching, which would break local testing.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+</dict>
+</plist>

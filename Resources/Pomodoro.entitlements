@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the Developer ID build that build.sh signs.
+
+  The build uses the hardened runtime, and macOS refuses calendar access to a
+  hardened app that lacks this entitlement: the permission prompt never
+  appears and EventKit simply reports "not granted", so Connect did nothing.
+
+  Deliberately NOT sandboxed (unlike AppStore.entitlements): the sandbox would
+  move the app's preferences into a container and the saved tasks would vanish.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+</dict>
+</plist>
