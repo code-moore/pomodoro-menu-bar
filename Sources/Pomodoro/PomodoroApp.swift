@@ -35,14 +35,14 @@ struct PomodoroApp: App {
         // "Label" switch still decides whether its name is shown.
         if let suffix = planner.imminentMeetingSuffix {
             let time = Text(suffix).monospacedDigit()
-            return planner.showLabelInMenuBar ? Text(label) + Text("  ") + time : time
+            return planner.showLabelInMenuBar ? Text(label) + Text(verbatim: "  ") + time : time
         }
 
         guard planner.showLabelInMenuBar else {
             return planner.menuBarTime.map { Text($0).monospacedDigit() } ?? Text(label)
         }
         guard let time = planner.menuBarTime else { return Text(label) }
-        return Text(label) + Text("  ") + Text(time).monospacedDigit()
+        return Text(label) + Text(verbatim: "  ") + Text(time).monospacedDigit()
     }
 }
 
@@ -50,6 +50,9 @@ struct PomodoroApp: App {
 // MARK: - Popover
 
 struct DayPlanMenu: View {
+    /// The iPhone app's early access page, in the app's language.
+    static let earlyAccessURL = AppLanguage.websiteURL("early-access/")
+
     @ObservedObject var planner: DayPlanner
     @ObservedObject var updates: UpdateController
     @StateObject private var loginItem = LoginItemController()
@@ -81,7 +84,7 @@ struct DayPlanMenu: View {
                 if planner.historyLoadError != nil {
                     // Rare, but silently showing an empty day would look like
                     // the tasks were deleted.
-                    Label("Your saved tasks couldn't be read. A copy was kept so they can be recovered: see quietpomodoro.com/support.",
+                    Label("Your saved tasks couldn't be read. A copy was kept so they can be recovered: see quietpomodoro.com/mac/support.",
                           systemImage: "exclamationmark.triangle")
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.warning)
@@ -175,18 +178,20 @@ struct DayPlanMenu: View {
     }
 
     private var summary: String {
-        guard !planner.tasks.isEmpty else { return "nothing planned" }
+        guard !planner.tasks.isEmpty else {
+            return String(localized: "nothing planned", comment: "Panel header when there are no tasks. Lower case, short.")
+        }
         let remaining = Self.durationText(planner.plannedMinutesRemaining)
-        return "\(planner.completedCount)/\(planner.tasks.count) done · \(remaining) of work left"
+        return String(localized: "\(planner.completedCount)/\(planner.tasks.count) done · \(remaining) of work left",
+                      comment: "Panel header, top right, 12pt: tasks done of total, then work left, e.g. \"2/5 done · 1h 30m of work left\". Keep it short.")
     }
 
     /// "145m" reads badly next to a clock; hours and minutes is clearer.
+    /// Foundation's narrow units give "2h 25m" in English and each language's
+    /// own short form elsewhere.
     static func durationText(_ minutes: Int) -> String {
-        let hours = minutes / 60
-        let remainder = minutes % 60
-        if hours == 0 { return "\(remainder)m" }
-        if remainder == 0 { return "\(hours)h" }
-        return "\(hours)h \(remainder)m"
+        Duration.seconds(max(0, minutes) * 60)
+            .formatted(.units(allowed: [.hours, .minutes], width: .narrow))
     }
 
     // MARK: Countdown
@@ -201,7 +206,8 @@ struct DayPlanMenu: View {
                     let left = meeting.start.timeIntervalSince(context.date)
                     // Once it has started, say so rather than sit at 0:00
                     // until the panel next refreshes.
-                    clockText(left > 0 ? DayPlanner.format(left) : "Now")
+                    clockText(left > 0 ? DayPlanner.format(left)
+                              : String(localized: "Now", comment: "Replaces the 46pt countdown once a meeting has started. One short word."))
                 }
             } else {
                 clockText(planner.menuBarTime ?? "0:00")
@@ -232,11 +238,13 @@ struct DayPlanMenu: View {
                 blockTitle(meeting.title, isCurrent: true)
                 blockDetails(BlockRow.range(meeting.start, meeting.end, allDay: meeting.isAllDay))
             } else if let block = planner.displayBlock {
-                blockTitle(block.title.isEmpty ? "Untitled" : block.title,
+                blockTitle(block.title.isEmpty ? String(localized: "Untitled") : block.title,
                            isCurrent: planner.activeBlock != nil)
                 blockDetails(BlockRow.range(block))
             } else {
-                blockTitle("Add a task below to build your day", isCurrent: false)
+                blockTitle(String(localized: "Add a task below to build your day",
+                                  comment: "Card text when nothing is planned. Wraps to at most 2 lines in 290pt."),
+                           isCurrent: false)
             }
         }
         // Leaves the buttons their room; a long name wraps instead.
@@ -564,7 +572,8 @@ struct DayPlanMenu: View {
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.accent)
             } else {
-                Text(planner.calendarError ?? "Calendar not connected, so meetings won't appear")
+                Text(planner.calendarError ?? String(localized: "Calendar not connected, so meetings won't appear",
+                                                     comment: "Panel header, 2 lines in 190pt at 12pt."))
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.accent)
                     .multilineTextAlignment(.trailing)
@@ -586,7 +595,9 @@ struct DayPlanMenu: View {
 
     private var meetingSummary: String {
         let count = planner.meetings.filter { !$0.isAllDay }.count
-        return count == 0 ? "No meetings today" : "\(count) meeting\(count == 1 ? "" : "s") today"
+        return count == 0
+            ? String(localized: "No meetings today", comment: "Panel header, next to a calendar icon.")
+            : String(localized: "\(count) meetings today", comment: "Panel header, next to a calendar icon. Number of timed meetings today.")
     }
 
     // MARK: Footer
@@ -644,7 +655,7 @@ struct DayPlanMenu: View {
                 .buttonStyle(SoftButtonStyle(circular: true, compact: true))
                 .help(planner.panelCollapsed ? "Show the task list" : "Fold up the task list")
 
-                Link(destination: URL(string: "https://quietpomodoro.com/early-access/")!) {
+                Link(destination: Self.earlyAccessURL) {
                     Image(systemName: "iphone")
                         .foregroundStyle(Theme.accent)
                 }
@@ -682,7 +693,7 @@ struct DayPlanMenu: View {
         planner.clearAll()
     }
 
-    private func settingsSwitch(_ title: String, value: Binding<Bool>) -> some View {
+    private func settingsSwitch(_ title: LocalizedStringKey, value: Binding<Bool>) -> some View {
         HStack {
             Text(title)
             Spacer()
@@ -693,7 +704,7 @@ struct DayPlanMenu: View {
         }
     }
 
-    private func settingsNumberInput(_ title: String, value: Binding<Int>,
+    private func settingsNumberInput(_ title: LocalizedStringKey, value: Binding<Int>,
                                      range: ClosedRange<Int>, step: Int = 1,
                                      defaultValue: Int? = nil, savesWhileTyping: Bool = false) -> some View {
         SettingsNumberInput(title: title, value: value, range: range, step: step,
@@ -706,8 +717,9 @@ struct DayPlanMenu: View {
             .frame(height: 1)
             .padding(.vertical, 8)
             .padding(.horizontal, -18)
-            .accessibilityLabel("Finish \(time.formatted(date: .omitted, time: .shortened))")
-            .help("Finish \(time.formatted(date: .omitted, time: .shortened))")
+            // The same 24-hour time as the plan's rows beside it.
+            .accessibilityLabel("Finish \(BlockRow.time(time))")
+            .help("Finish \(BlockRow.time(time))")
     }
 
     private var settingsPanel: some View {
@@ -841,9 +853,13 @@ struct BlockRow: View {
     static func range(_ start: Date, _ end: Date, allDay: Bool = false) -> String {
         // An all-day event runs midnight to midnight, which would render as the
         // nonsense "00:00–00:00".
-        if allDay { return "All day" }
-        return "\(timeFormatter.string(from: start))–\(timeFormatter.string(from: end))"
+        if allDay {
+            return String(localized: "All day", comment: "Time column of an all-day event. 78pt at 12pt: about 11 Latin characters at most.")
+        }
+        return "\(time(start))–\(time(end))"
     }
+
+    static func time(_ date: Date) -> String { timeFormatter.string(from: date) }
 
     var body: some View {
         if isEditing {
@@ -896,7 +912,7 @@ struct BlockRow: View {
                 // Centred alignment keeps the calendar name level with a title
                 // that has wrapped onto several lines.
                 HStack(alignment: .center, spacing: 4) {
-                    Text(block.title.isEmpty ? "Untitled" : block.title)
+                    Text(block.title.isEmpty ? String(localized: "Untitled") : block.title)
                         .font(.system(size: 13, weight: isActive ? .semibold : .regular))
                         // A long name wraps onto extra lines once the row is
                         // selected, so the whole thing can be read.
@@ -910,7 +926,7 @@ struct BlockRow: View {
 
                     // Meetings carry the calendar they came from, in brackets.
                     if block.isMeeting, let name = block.calendarName, !name.isEmpty {
-                        Text("(\(name))")
+                        Text(verbatim: "(\(name))")
                             .font(.system(size: 12))
                             .foregroundStyle(Theme.secondaryText)
                             .lineLimit(1)
@@ -1109,7 +1125,7 @@ struct DoneRow: View {
 
             Color.clear.frame(width: 12, height: 12)
 
-            Text(task.title.isEmpty ? "Untitled" : task.title)
+            Text(task.title.isEmpty ? String(localized: "Untitled") : task.title)
                 .font(.system(size: 13))
                 .lineLimit(isSelected ? nil : 1)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1168,7 +1184,7 @@ struct DoneRow: View {
 /// Commit typed settings on Return or focus loss, so multi-digit values can
 /// be entered before applying bounds and rebuilding the schedule.
 private struct SettingsNumberInput: View {
-    let title: String
+    let title: LocalizedStringKey
     @Binding var value: Int
     let range: ClosedRange<Int>
     let step: Int

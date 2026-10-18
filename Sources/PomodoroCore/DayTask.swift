@@ -10,9 +10,9 @@ public enum TaskPriority: Int, Codable, CaseIterable, Comparable, Hashable, Send
 
     public var name: String {
         switch self {
-        case .urgent: return "Urgent"
-        case .lessUrgent: return "Less urgent"
-        case .leastUrgent: return "Least urgent"
+        case .urgent: return String(localized: "Urgent", comment: "Task priority, shown as a tooltip on its coloured dot.")
+        case .lessUrgent: return String(localized: "Less urgent", comment: "Task priority, shown as a tooltip on its coloured dot.")
+        case .leastUrgent: return String(localized: "Least urgent", comment: "Task priority, shown as a tooltip on its coloured dot.")
         }
     }
 }

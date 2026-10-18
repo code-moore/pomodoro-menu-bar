@@ -43,8 +43,8 @@ PKG="$OUT_DIR/$APP_NAME-$VERSION-$BUILD_NUMBER.pkg"
 export APP_STORE=1
 export CLANG_MODULE_CACHE_PATH="$PWD/.build-appstore/clang-module-cache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build-appstore/swiftpm-module-cache"
-SPM_FLAGS=(
-  -c release --arch arm64 --arch x86_64
+SPM_BASE_FLAGS=(
+  -c release
   --cache-path "$PWD/.build/cache"
   --config-path "$PWD/.build/config"
   --security-path "$PWD/.build/security"
@@ -52,6 +52,10 @@ SPM_FLAGS=(
   # Nested sandboxing is blocked inside the harness sandbox; see build.sh.
   --disable-sandbox
 )
+SPM_FLAGS=("${SPM_BASE_FLAGS[@]}" --arch arm64 --arch x86_64)
+
+# Stops here if any string the code looks up isn't translated.
+Tools/check-release-localizations.sh "${SPM_BASE_FLAGS[@]}"
 
 echo "==> swift build (App Store flavour, arm64 + x86_64)"
 swift build "${SPM_FLAGS[@]}"
@@ -93,6 +97,11 @@ pb "Add :CFBundleIconFile string AppIcon"
 pb "Add :CFBundleIconName string AppIcon"
 
 cp Resources/PrivacyInfo.xcprivacy "$APP/Contents/Resources/"
+
+# Translations: each catalog becomes a <language>.lproj folder in Resources.
+for catalog in Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings; do
+  xcrun xcstringstool compile "$catalog" --output-directory "$APP/Contents/Resources"
+done
 
 # --- 3. Entitlements and provisioning profile ---------------------------------
 ENTITLEMENTS="$actool_out/app.entitlements"

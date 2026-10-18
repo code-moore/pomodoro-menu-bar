@@ -66,6 +66,11 @@ SPM_CACHE_FLAGS=(
 # Universal binary so Intel Macs can run it too.
 ARCH_FLAGS=(--arch arm64 --arch x86_64)
 
+# A release stops if any string the code looks up isn't translated.
+if [ "$RELEASE_BUILD" = 1 ]; then
+  Tools/check-release-localizations.sh -c "$CONFIG" "${SPM_CACHE_FLAGS[@]}"
+fi
+
 echo "==> swift build -c $CONFIG (arm64 + x86_64)"
 swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}"
 
@@ -97,6 +102,11 @@ xcrun actool Resources/AppIcon.icon \
 /usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string AppIcon' "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Add :CFBundleIconName string AppIcon' "$APP/Contents/Info.plist"
 cp Resources/PrivacyInfo.xcprivacy "$APP/Contents/Resources/"
+
+# Translations: each catalog becomes a <language>.lproj folder in Resources.
+for catalog in Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings; do
+  xcrun xcstringstool compile "$catalog" --output-directory "$APP/Contents/Resources"
+done
 
 # --- Embed Sparkle -----------------------------------------------------------
 # SwiftPM links the XCFramework but does not bundle it. The framework has to be

@@ -1,0 +1,162 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSCalendarsFullAccessUsageDescription": {
+      "comment": "macOS calendar permission prompt: why Pomodoro asks for calendar access.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro liest die heutigen Termine, um deine Aufgaben darum herum einzuplanen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro reads today's meetings so it can slot your tasks around them."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro lee las reuniones de hoy para encajar tus tareas entre ellas."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Binabasa ng Pomodoro ang mga meeting mo ngayong araw para maiayos ang iyong mga gawain sa pagitan ng mga ito."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro lit vos réunions du jour pour placer vos tâches entre elles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro legge le riunioni di oggi per inserire le tue attività negli spazi liberi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoroは今日の会議を読み取り、その合間にタスクを組み込みます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro는 오늘의 회의를 읽어 그 사이에 작업을 배치합니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro leest de vergaderingen van vandaag om je taken eromheen in te plannen."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Pomodoro lê as reuniões de hoje para encaixar suas tarefas entre elas."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro läser dagens möten så att dina uppgifter kan planeras runt dem."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro 会读取今天的会议，以便在会议之间安排你的任务。"
+          }
+        }
+      }
+    },
+    "NSCalendarsUsageDescription": {
+      "comment": "macOS calendar permission prompt: why Pomodoro asks for calendar access.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro liest die heutigen Termine, um deine Aufgaben darum herum einzuplanen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro reads today's meetings so it can slot your tasks around them."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro lee las reuniones de hoy para encajar tus tareas entre ellas."
+          }
+        },
+        "fil": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Binabasa ng Pomodoro ang mga meeting mo ngayong araw para maiayos ang iyong mga gawain sa pagitan ng mga ito."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro lit vos réunions du jour pour placer vos tâches entre elles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro legge le riunioni di oggi per inserire le tue attività negli spazi liberi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoroは今日の会議を読み取り、その合間にタスクを組み込みます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro는 오늘의 회의를 읽어 그 사이에 작업을 배치합니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro leest de vergaderingen van vandaag om je taken eromheen in te plannen."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Pomodoro lê as reuniões de hoje para encaixar suas tarefas entre elas."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro läser dagens möten så att dina uppgifter kan planeras runt dem."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro 会读取今天的会议，以便在会议之间安排你的任务。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

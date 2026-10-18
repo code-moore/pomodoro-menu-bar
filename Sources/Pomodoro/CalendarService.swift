@@ -73,10 +73,17 @@ final class CalendarService: PlannerCalendar {
     /// short: it shares the panel's header with the countdown, in two lines.
     private static func deniedMessage(for status: EKAuthorizationStatus) -> String {
         switch status {
-        case .denied: return "Allow Pomodoro in System Settings > Privacy > Calendars"
-        case .restricted: return "Calendar access is restricted on this Mac"
-        case .writeOnly: return "Choose Full Access for Pomodoro in System Settings"
-        default: return "macOS did not grant calendar access, try Connect again"
+        case .denied:
+            return String(localized: "Allow Pomodoro in System Settings > Privacy > Calendars",
+                          comment: "Panel header, 2 lines in 190pt. Use macOS's own names for System Settings, Privacy & Security and Calendars in this language.")
+        case .restricted:
+            return String(localized: "Calendar access is restricted on this Mac", comment: "Panel header, 2 lines in 190pt.")
+        case .writeOnly:
+            return String(localized: "Choose Full Access for Pomodoro in System Settings",
+                          comment: "Panel header, 2 lines in 190pt. Full Access is macOS's name for the calendar permission level.")
+        default:
+            return String(localized: "macOS did not grant calendar access, try Connect again",
+                          comment: "Panel header, 2 lines in 190pt. Connect is the button next to it.")
         }
     }
 
@@ -137,7 +144,8 @@ final class CalendarService: PlannerCalendar {
 
                 return Meeting(
                     id: Self.stableID(for: event),
-                    title: (title?.isEmpty == false) ? title! : "Untitled event",
+                    title: (title?.isEmpty == false) ? title! : String(localized: "Untitled event",
+                                                                        comment: "A calendar event with no title, as a row in the day's plan."),
                     start: banner ? start : eventStart,
                     end: banner ? end : eventEnd,
                     isAllDay: banner,

@@ -59,6 +59,30 @@ checked for the correct download URL, size, versions and Ed25519 signature
 against the public key embedded in the built app. Successful output includes
 the archive, its SHA-256 checksum and `releases/appcast.xml`.
 
+## Translations
+
+The app ships in the same 12 languages as quietpomodoro.com (`en`, `de`,
+`es`, `fil`, `fr`, `it`, `ja`, `ko`, `nl`, `pt-BR`, `sv`, `zh-Hans`). The text
+lives in `Resources/Localizable.xcstrings` and `Resources/InfoPlist.xcstrings`;
+both builds compile them into `<language>.lproj` folders in the app.
+
+- After changing any text the user sees, run `Tools/sync-localizations.sh`.
+  It adds new strings to the catalog in English. Translate them into every
+  language, and delete strings the code no longer uses.
+- `Tools/check-localizations.py` fails on a missing translation, a changed
+  placeholder or an em dash. `swift test` runs it. Both release builds
+  (`RELEASE_BUILD=1 ./build.sh` and `./build-appstore.sh`) run it through
+  `Tools/check-release-localizations.sh`, which also fails when the code uses
+  a string the catalog lacks, and for the direct build when the catalog holds
+  one the code no longer uses.
+- The warning shown when saved tasks can't be read names
+  `quietpomodoro.com/<language>/mac/support`, so those pages must be live
+  before a release.
+- Each string's comment says where it appears and how much room it has.
+- To try a language without changing the Mac's, run the app with
+  `-AppleLanguages '(de)'`, or pick it in System Settings > General >
+  Language & Region > Applications.
+
 ## Publish on quietpomodoro.com
 
 In the website repository, copy the release archive, checksum and appcast into

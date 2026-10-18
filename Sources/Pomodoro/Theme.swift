@@ -170,8 +170,8 @@ struct DurationField: View {
                 }
             }
             .frame(width: 84)
-            .help(isInvalid ? (unit == .hours ? "Hours as a number, like 1 or 1.5"
-                                              : "Minutes as a whole number, like 25") : "")
+            .help(isInvalid ? (unit == .hours ? Text("Hours as a number, like 1 or 1.5")
+                                              : Text("Minutes as a whole number, like 25")) : Text(verbatim: ""))
     }
 
     private var isInvalid: Bool {
