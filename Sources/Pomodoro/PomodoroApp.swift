@@ -76,6 +76,13 @@ struct DayPlanMenu: View {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 controls
+
+                // The footer's fold chevron has to stay reachable, so with the
+                // list folded away the footer moves up into this card.
+                if planner.panelCollapsed {
+                    ThemeDivider()
+                    footer
+                }
             }
             .padding(18)
             .raised(cornerRadius: 22)
@@ -88,13 +95,12 @@ struct DayPlanMenu: View {
                     ThemeDivider()
                     timeline
                         .padding(.horizontal, -14)
+                    ThemeDivider()
+                    footer
                 }
                 .padding(EdgeInsets(top: 18, leading: 14, bottom: 14, trailing: 14))
                 .raised(cornerRadius: 22)
             }
-
-            footer
-                .padding(.horizontal, 6)
         }
         // Room for the cards' shade, which would otherwise be clipped at the
         // panel's edge.
@@ -523,7 +529,7 @@ struct DayPlanMenu: View {
     private var timelineCap: CGFloat {
         // Everything above and below the timeline (cards, padding, footer)
         // takes roughly this much of the screen.
-        let screenCap = (NSScreen.main?.visibleFrame.height ?? 900) - 480
+        let screenCap = (NSScreen.main?.visibleFrame.height ?? 900) - 492
         return max(120, min(460, screenCap))
     }
 
