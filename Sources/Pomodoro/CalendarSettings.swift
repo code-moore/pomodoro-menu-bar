@@ -58,7 +58,7 @@ struct CalendarSettings: View {
                         Circle()
                             .fill(calendar.color.map { Color(cgColor: $0) } ?? Theme.accent)
                             .frame(width: 8, height: 8)
-                        Text(calendar.title.isEmpty ? "Untitled" : calendar.title)
+                        Text(calendar.title.isEmpty ? String(localized: "Untitled") : calendar.title)
                             .lineLimit(1)
                         if !calendar.account.isEmpty {
                             Text(calendar.account)

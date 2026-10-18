@@ -1,0 +1,30 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSCalendarsFullAccessUsageDescription": {
+      "comment": "macOS calendar permission prompt: why Pomodoro asks for calendar access.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro reads today's meetings so it can slot your tasks around them."
+          }
+        }
+      }
+    },
+    "NSCalendarsUsageDescription": {
+      "comment": "macOS calendar permission prompt: why Pomodoro asks for calendar access.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pomodoro reads today's meetings so it can slot your tasks around them."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

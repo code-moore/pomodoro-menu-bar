@@ -1,0 +1,354 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%lld meetings today": {
+      "comment": "Panel header, next to a calendar icon. Number of timed meetings today.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meeting today"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld meetings today"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld/%lld done · %@ of work left": {
+      "comment": "Panel header, top right, 12pt: tasks done of total, then work left, e.g. \"2/5 done · 1h 30m of work left\". Keep it short.",
+      "extractionState": "manual"
+    },
+    "Add": {
+      "comment": "Button that adds the task typed above it. Short.",
+      "extractionState": "manual"
+    },
+    "Add a task below to build your day": {
+      "comment": "Card text when nothing is planned. Wraps to at most 2 lines in 290pt.",
+      "extractionState": "manual"
+    },
+    "All day": {
+      "comment": "Time column of an all-day event. 78pt at 12pt: about 11 Latin characters at most.",
+      "extractionState": "manual"
+    },
+    "All done. Add a task above to plan more.": {
+      "comment": "Task list text when every task is finished.",
+      "extractionState": "manual"
+    },
+    "Allow Pomodoro in Login Items to open it at login.": {
+      "comment": "Settings note under Open at login when macOS needs approval. Login Items is macOS's name for System Settings > General > Login Items; use macOS's own name in this language.",
+      "extractionState": "manual"
+    },
+    "Allow Pomodoro in System Settings > Privacy > Calendars": {
+      "comment": "Panel header, 2 lines in 190pt. Use macOS's own names for System Settings, Privacy & Security and Calendars in this language.",
+      "extractionState": "manual"
+    },
+    "Auto-start next block": {
+      "comment": "Settings switch label, about 300pt.",
+      "extractionState": "manual"
+    },
+    "Break": {
+      "comment": "A short break's name in the day's plan and the menu bar.",
+      "extractionState": "manual"
+    },
+    "Calendar access is restricted on this Mac": {
+      "comment": "Panel header, 2 lines in 190pt.",
+      "extractionState": "manual"
+    },
+    "Calendar event": {
+      "comment": "Greyed-out right-click menu item on a calendar event row.",
+      "extractionState": "manual"
+    },
+    "Calendar not connected, so meetings won't appear": {
+      "comment": "Panel header, 2 lines in 190pt at 12pt.",
+      "extractionState": "manual"
+    },
+    "Calendars": {
+      "comment": "Settings section header above the list of calendars.",
+      "extractionState": "manual"
+    },
+    "Cancel": {
+      "comment": "Cancels the Clear all confirmation. Short.",
+      "extractionState": "manual"
+    },
+    "Check for Updates…": {
+      "comment": "Settings button. Use the standard macOS wording for this command in this language, ending in an ellipsis.",
+      "extractionState": "manual"
+    },
+    "Choose Full Access for Pomodoro in System Settings": {
+      "comment": "Panel header, 2 lines in 190pt. Full Access is macOS's name for the calendar permission level.",
+      "extractionState": "manual"
+    },
+    "Clear all": {
+      "comment": "Footer button that deletes every task. Short.",
+      "extractionState": "manual"
+    },
+    "Clear done": {
+      "comment": "Footer button that removes finished tasks from today. Short.",
+      "extractionState": "manual"
+    },
+    "Connect": {
+      "comment": "Compact button that asks macOS for calendar access. One short word if possible.",
+      "extractionState": "manual"
+    },
+    "Connect your calendar from the panel to choose which ones count.": {
+      "comment": "Settings, calendars section, when calendar access isn't granted yet.",
+      "extractionState": "manual"
+    },
+    "Delete": {
+      "comment": "Confirms Clear all. Destructive. Short.",
+      "extractionState": "manual"
+    },
+    "Delete all %lld tasks?": {
+      "comment": "Inline confirmation in the panel footer before deleting every task. Keep it short.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete %lld task?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Delete all %lld tasks?"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Delete task": {
+      "comment": "Right-click menu item on a task row.",
+      "extractionState": "manual"
+    },
+    "Delete this task": {
+      "comment": "Tooltip on the trash button.",
+      "extractionState": "manual"
+    },
+    "Done": {
+      "comment": "Small section header above finished tasks, 11pt. Means finished, not the OK button.",
+      "extractionState": "manual"
+    },
+    "Edit this task": {
+      "comment": "Tooltip on the pencil button.",
+      "extractionState": "manual"
+    },
+    "Finish %@": {
+      "comment": "Tooltip and VoiceOver label on the red line that marks the chosen finish time. %@ is a time, e.g. 17:00.",
+      "extractionState": "manual"
+    },
+    "Finish time": {
+      "comment": "Settings switch: show a red line in the plan at the time you want to stop working.",
+      "extractionState": "manual"
+    },
+    "Finished at this time": {
+      "comment": "Tooltip on a finished task's time.",
+      "extractionState": "manual"
+    },
+    "Fold up the task list": {
+      "comment": "Tooltip on the chevron button that hides the task list.",
+      "extractionState": "manual"
+    },
+    "Hour (0-23)": {
+      "comment": "Settings label next to a number box for the finish hour, 24-hour clock.",
+      "extractionState": "manual"
+    },
+    "Hours": {
+      "comment": "Placeholder inside an 84pt box for a task's hours. Short.",
+      "extractionState": "manual"
+    },
+    "Hours as a number, like 1 or 1.5": {
+      "comment": "Tooltip when the hours box isn't a number. Both 1.5 and 1,5 are accepted, so use this language's decimal separator in the example.",
+      "extractionState": "manual"
+    },
+    "in %@": {
+      "comment": "Menu bar, after a meeting's name: time until it starts, e.g. \"in 12m\". Keep it very short.",
+      "extractionState": "manual"
+    },
+    "Least urgent": {
+      "comment": "Task priority, shown as a tooltip on its coloured dot.",
+      "extractionState": "manual"
+    },
+    "Less urgent": {
+      "comment": "Task priority, shown as a tooltip on its coloured dot.",
+      "extractionState": "manual"
+    },
+    "Long break": {
+      "comment": "A break's name in the day's plan and the menu bar.",
+      "extractionState": "manual"
+    },
+    "Long break (min)": {
+      "comment": "Settings label next to a number box. (min) is minutes; use the usual short form.",
+      "extractionState": "manual"
+    },
+    "macOS did not grant calendar access, try Connect again": {
+      "comment": "Panel header, 2 lines in 190pt. Connect is the button next to it.",
+      "extractionState": "manual"
+    },
+    "Mark done": {
+      "comment": "Tooltip and VoiceOver label on a task's checkbox.",
+      "extractionState": "manual"
+    },
+    "Mark not done": {
+      "comment": "Tooltip and VoiceOver label on a finished task's checkbox.",
+      "extractionState": "manual"
+    },
+    "Mark task done": {
+      "comment": "Right-click menu item on a task row.",
+      "extractionState": "manual"
+    },
+    "Mark task not done": {
+      "comment": "Right-click menu item on a finished task row.",
+      "extractionState": "manual"
+    },
+    "Minute": {
+      "comment": "Settings label next to a number box for the finish minute.",
+      "extractionState": "manual"
+    },
+    "Minutes": {
+      "comment": "Placeholder inside an 84pt box for a task's minutes. Short.",
+      "extractionState": "manual"
+    },
+    "Minutes as a whole number, like 25": {
+      "comment": "Tooltip when the minutes box isn't a whole number.",
+      "extractionState": "manual"
+    },
+    "Missing a calendar? Add its account to your Mac.": {
+      "comment": "Settings hint under the list of calendars.",
+      "extractionState": "manual"
+    },
+    "New task": {
+      "comment": "Placeholder in the box where a task's name is typed.",
+      "extractionState": "manual"
+    },
+    "No blocks yet. Add a task above.": {
+      "comment": "Plan area text before any task is added. A block is one timed work session or break.",
+      "extractionState": "manual"
+    },
+    "No meetings today": {
+      "comment": "Panel header, next to a calendar icon.",
+      "extractionState": "manual"
+    },
+    "nothing planned": {
+      "comment": "Panel header when there are no tasks. Lower case, short.",
+      "extractionState": "manual"
+    },
+    "Now": {
+      "comment": "Replaces the 46pt countdown once a meeting has started. One short word.",
+      "extractionState": "manual"
+    },
+    "now": {
+      "comment": "Menu bar, after a meeting's name, once it has started. Lower case, one short word.",
+      "extractionState": "manual"
+    },
+    "Open at login": {
+      "comment": "Settings switch: start Pomodoro when you log in to the Mac.",
+      "extractionState": "manual"
+    },
+    "Open Internet Accounts…": {
+      "comment": "Button that opens System Settings > Internet Accounts. Use macOS's own name for Internet Accounts in this language.",
+      "extractionState": "manual"
+    },
+    "Open Login Items…": {
+      "comment": "Button that opens System Settings > General > Login Items. Use macOS's own name for Login Items in this language.",
+      "extractionState": "manual"
+    },
+    "Pause": {
+      "comment": "Main button tooltip and VoiceOver label: pause the countdown.",
+      "extractionState": "manual"
+    },
+    "Plan your day": {
+      "comment": "Menu bar label when nothing is planned. Keep it under about 16 characters.",
+      "extractionState": "manual"
+    },
+    "Quiet Pomodoro early access": {
+      "comment": "Tooltip on the iPhone icon that links to the iPhone app's early access page. Keep \"Quiet Pomodoro\" as is.",
+      "extractionState": "manual"
+    },
+    "Quit": {
+      "comment": "Footer button that quits the app.",
+      "extractionState": "manual"
+    },
+    "Reset": {
+      "comment": "Main button tooltip and VoiceOver label: reset the countdown to the start of the block.",
+      "extractionState": "manual"
+    },
+    "Roll straight into the next block when one finishes": {
+      "comment": "Tooltip on the Auto-start next block switch.",
+      "extractionState": "manual"
+    },
+    "Save": {
+      "comment": "Saves edits to a task.",
+      "extractionState": "manual"
+    },
+    "Settings": {
+      "comment": "Tooltip on the gear button that opens settings.",
+      "extractionState": "manual"
+    },
+    "Short break (min)": {
+      "comment": "Settings label next to a number box. (min) is minutes; use the usual short form.",
+      "extractionState": "manual"
+    },
+    "Show label in menu bar": {
+      "comment": "Settings switch: show the task's name next to the countdown in the menu bar.",
+      "extractionState": "manual"
+    },
+    "Show the task list": {
+      "comment": "Tooltip on the chevron button that shows the hidden task list.",
+      "extractionState": "manual"
+    },
+    "Start": {
+      "comment": "Main button tooltip and VoiceOver label: start the countdown.",
+      "extractionState": "manual"
+    },
+    "Start hour": {
+      "comment": "Settings label next to a number box: the hour the day's plan starts.",
+      "extractionState": "manual"
+    },
+    "Start minute": {
+      "comment": "Settings label next to a number box: the minute the day's plan starts.",
+      "extractionState": "manual"
+    },
+    "Task name": {
+      "comment": "Placeholder in the box for a task's name while editing it.",
+      "extractionState": "manual"
+    },
+    "Untitled": {
+      "comment": "Shown instead of a task or calendar name that is empty.",
+      "extractionState": "manual"
+    },
+    "Untitled event": {
+      "comment": "A calendar event with no title, as a row in the day's plan.",
+      "extractionState": "manual"
+    },
+    "Urgent": {
+      "comment": "Task priority, shown as a tooltip on its coloured dot.",
+      "extractionState": "manual"
+    },
+    "Work block (min)": {
+      "comment": "Settings label next to a number box: length of one work session. (min) is minutes; use the usual short form.",
+      "extractionState": "manual"
+    },
+    "Your saved tasks couldn't be read. A copy was kept so they can be recovered: see quietpomodoro.com/mac/support.": {
+      "comment": "Rare warning at the top of the panel. Keep the web address exactly as is.",
+      "extractionState": "manual"
+    }
+  },
+  "version": "1.0"
+}

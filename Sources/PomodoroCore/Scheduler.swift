@@ -7,6 +7,13 @@ import Foundation
 /// Everything here is a pure function of its inputs. There is no `Date()`, no
 /// I/O, and no calendar access, so the layout can be unit tested exactly.
 public enum Scheduler {
+    /// A break's name in the plan and the menu bar.
+    static func breakTitle(isLong: Bool) -> String {
+        isLong
+            ? String(localized: "Long break", comment: "A break's name in the day's plan and the menu bar.")
+            : String(localized: "Break", comment: "A short break's name in the day's plan and the menu bar.")
+    }
+
     /// Hard ceiling on a single task's estimate.
     ///
     /// Applied here as well as at the UI layer, so a pathological value that
@@ -128,7 +135,7 @@ public enum Scheduler {
                 blocks.append(ScheduledBlock(
                     id: pendingBreak.id,
                     kind: pendingBreak.isLong ? .longBreak : .shortBreak,
-                    title: pendingBreak.isLong ? "Long break" : "Break",
+                    title: Self.breakTitle(isLong: pendingBreak.isLong),
                     start: pendingBreak.start,
                     end: end,
                     taskID: nil,
@@ -193,7 +200,7 @@ public enum Scheduler {
             blocks.append(ScheduledBlock(
                 id: "\(task.id.uuidString)-break-\(chunk.number)",
                 kind: isLong ? .longBreak : .shortBreak,
-                title: isLong ? "Long break" : "Break",
+                title: Self.breakTitle(isLong: isLong),
                 start: cursor,
                 end: breakEnd,
                 taskID: task.id,

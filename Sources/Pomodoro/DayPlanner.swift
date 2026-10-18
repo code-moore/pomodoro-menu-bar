@@ -418,7 +418,9 @@ final class DayPlanner: ObservableObject {
         if !isRunning, let meeting = imminentMeeting {
             return Self.fit(meeting.title, to: Self.maxMenuBarLabelLength)
         }
-        guard let block = displayBlock else { return "Plan your day" }
+        guard let block = displayBlock else {
+            return String(localized: "Plan your day", comment: "Menu bar label when nothing is planned. Keep it under about 16 characters.")
+        }
         if block.isBreak { return block.title }
         if let taskID = block.taskID, let task = tasks.first(where: { $0.id == taskID }) {
             let short = task.shortLabel.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -432,7 +434,11 @@ final class DayPlanner: ObservableObject {
     var imminentMeetingSuffix: String? {
         guard !isRunning, let meeting = imminentMeeting else { return nil }
         let minutes = max(0, Int(ceil(meeting.start.timeIntervalSince(now()) / 60)))
-        return minutes <= 0 ? "now" : "in \(minutes)m"
+        if minutes <= 0 {
+            return String(localized: "now", comment: "Menu bar, after a meeting's name, once it has started. Lower case, one short word.")
+        }
+        let left = Duration.seconds(minutes * 60).formatted(.units(allowed: [.minutes], width: .narrow))
+        return String(localized: "in \(left)", comment: "Menu bar, after a meeting's name: time until it starts, e.g. \"in 12m\". Keep it very short.")
     }
 
     // MARK: - Task CRUD
@@ -927,7 +933,7 @@ final class DayPlanner: ObservableObject {
         for task in tasks {
             out.append(
                 "  [\(task.isDone ? "x" : " ")] \(task.title)  \(task.estimateMinutes)m"
-                + "  priority=\(task.priority.name)  worked=\(task.completedMinutes)m"
+                + "  priority=\(task.priority)  worked=\(task.completedMinutes)m"
             )
         }
         out.append("  pomodoros today: \(completedPomodoros)")
