@@ -31,12 +31,18 @@ manually once with a website release.
 swift package resolve
 ./release.sh --check
 swift test --disable-sandbox
-./release.sh 1.2
+python3 -m unittest discover -s Tests -p 'test_*.py'
+./release.sh 1.3
 ```
 
-Use a new marketing version for each release. Build numbers increase by UTC
+Use a new marketing version for each release. 1.2 is the first public
+release; 1.2.1 was notarized from an older checkout but never published, so
+don't reuse that number either. Build numbers increase by UTC
 timestamp; `BUILD_NUMBER` can override this but must exceed the existing feed.
 Keep the latest published `releases/appcast.xml` locally for subsequent releases.
+On a fresh checkout, copy it from the website repository's
+`site/dist/downloads/mac/appcast.xml` first, so the new feed keeps the older
+entries and the build-number check runs.
 The script rejects insecure URLs, missing credentials, mismatched Sparkle keys,
 reused archive names and unsigned or rejected notarization results. It never
 changes the source plist's version or replaces the local running app.

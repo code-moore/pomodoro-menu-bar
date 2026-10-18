@@ -58,6 +58,18 @@ public enum Scheduler {
         "meeting-\(meeting.id)"
     }
 
+    /// The timeline id of a task's work block. Blocks number on from the ones
+    /// already finished, so the next to run is `completedBlocks + 1`.
+    public static func workBlockID(taskID: UUID, number: Int) -> ScheduledBlock.ID {
+        "\(taskID.uuidString)-work-\(number)"
+    }
+
+    /// The task a work block belongs to, read back from its id.
+    public static func taskID(forWorkBlock id: ScheduledBlock.ID) -> UUID? {
+        guard let range = id.range(of: "-work-") else { return nil }
+        return UUID(uuidString: String(id[..<range.lowerBound]))
+    }
+
     /// The order tasks are worked through: most urgent first, and in the
     /// order they were added within a level.
     public static func ordered(_ tasks: [DayTask]) -> [DayTask] {
@@ -156,7 +168,7 @@ public enum Scheduler {
             let workEnd = adding(minutes: chunk.minutes, to: cursor, calendar: calendar)
 
             blocks.append(ScheduledBlock(
-                id: "\(task.id.uuidString)-work-\(chunk.number)",
+                id: workBlockID(taskID: task.id, number: chunk.number),
                 kind: .work,
                 title: task.title,
                 start: cursor,

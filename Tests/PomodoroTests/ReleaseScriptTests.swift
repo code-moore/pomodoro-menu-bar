@@ -2,34 +2,12 @@ import XCTest
 
 final class ReleaseScriptTests: XCTestCase {
     private func source(_ path: String = "release.sh") throws -> String {
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .deletingLastPathComponent().deletingLastPathComponent()
-        return try String(contentsOf: root.appendingPathComponent(path), encoding: .utf8)
+        try ScriptTestSupport.source(path)
     }
 
-    private func runResult(_ script: String) throws -> (status: Int32, output: String) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", "set -euo pipefail\n" + script]
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = output
-        try process.run()
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return (process.terminationStatus, String(decoding: data, as: UTF8.self))
-    }
-
-    /// Execute only the script's appcast decision, never build, sign or package.
+    /// Execute only a fragment of a script, never build, sign or package.
     private func run(_ script: String) throws -> Int32 {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", "set -euo pipefail\n" + script]
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
-        try process.run()
-        process.waitUntilExit()
-        return process.terminationStatus
+        try ScriptTestSupport.snippet(script).status
     }
 
     func testGeneratorFailureIsNonzeroAndSuccessStaysSuccessful() throws {
@@ -59,10 +37,37 @@ final class ReleaseScriptTests: XCTestCase {
         let start = try XCTUnwrap(script.range(of: "echo \"==> Verifying signature\""))
         let verification = String(script[start.lowerBound...])
         let setup = "APP=Pomodoro.app\nWAS_RUNNING=0\n"
-        let rejected = try runResult(setup + "codesign() { return 1; }\n" + verification)
+        let rejected = try ScriptTestSupport.snippet(setup + "codesign() { return 1; }\n" + verification)
         XCTAssertNotEqual(rejected.status, 0)
         XCTAssertFalse(rejected.output.contains("==> Built"))
         XCTAssertEqual(try run(setup + "codesign() { return 0; }\n" + verification), 0)
+    }
+
+    func testFailedBuildRestoresAndReopensThePreviousApp() throws {
+        let script = try source("build.sh")
+        let start = try XCTUnwrap(script.range(of: "cleanup() {"))
+        let end = try XCTUnwrap(script.range(of: "\n}\n", range: start.upperBound..<script.endIndex))
+        let cleanup = String(script[start.lowerBound..<end.upperBound])
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        for (built, expected) in [("0", "old"), ("1", "new")] {
+            let setup = """
+                cd '\(directory.path)'
+                rm -rf Pomodoro.app Pomodoro.app.previous
+                mkdir -p Pomodoro.app.previous Pomodoro.app
+                echo old > Pomodoro.app.previous/marker
+                echo new > Pomodoro.app/marker
+                APP=Pomodoro.app WAS_RUNNING=1 BUILD_OK=\(built) ICON_TEMP=""
+                open() { echo "opened $1"; }
+
+                """
+            let result = try ScriptTestSupport.snippet(setup + cleanup + "cleanup\ncat Pomodoro.app/marker\n")
+            XCTAssertEqual(result.status, 0, result.output)
+            XCTAssertTrue(result.output.hasSuffix("\(expected)\n"), result.output)
+            XCTAssertEqual(result.output.contains("opened Pomodoro.app"), built == "0", result.output)
+        }
     }
 
     func testEmptyToolDiscoveryIsAnError() throws {
@@ -74,8 +79,7 @@ final class ReleaseScriptTests: XCTestCase {
     }
 
     func testReleaseRejectsUnsafeInputsWithoutChangingSourceVersion() throws {
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .deletingLastPathComponent().deletingLastPathComponent()
+        let root = ScriptTestSupport.root
         let plist = root.appendingPathComponent("Resources/Info.plist")
         let original = try Data(contentsOf: plist)
         for (arguments, overrides) in [
@@ -86,15 +90,10 @@ final class ReleaseScriptTests: XCTestCase {
             (["1.2"], ["APPCAST_URL": "https://quietpomodoro.com/appcast.xml?token=secret"]),
             (["1.2"], ["BUILD_NUMBER": "not-a-number"])
         ] {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/bash")
-            process.arguments = [root.appendingPathComponent("release.sh").path] + arguments
-            process.environment = ProcessInfo.processInfo.environment.merging(overrides) { _, new in new }
-            process.standardOutput = Pipe()
-            process.standardError = Pipe()
-            try process.run()
-            process.waitUntilExit()
-            XCTAssertNotEqual(process.terminationStatus, 0)
+            let result = try ScriptTestSupport.bash(
+                [root.appendingPathComponent("release.sh").path] + arguments,
+                environment: ProcessInfo.processInfo.environment.merging(overrides) { _, new in new })
+            XCTAssertNotEqual(result.status, 0)
             XCTAssertEqual(try Data(contentsOf: plist), original)
         }
     }

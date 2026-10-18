@@ -58,6 +58,14 @@ public struct DayTask: Identifiable, Codable, Hashable, Sendable {
     /// The part of the estimate not yet worked.
     public var remainingMinutes: Int { max(0, max(1, estimateMinutes) - completedMinutes) }
 
+    /// Records one of its work blocks running to the end: the minutes count
+    /// towards the estimate, and the task is done once they cover it.
+    public mutating func creditFinishedBlock(minutes: Int, endedAt: Date) {
+        completedMinutes += minutes
+        completedBlocks += 1
+        if remainingMinutes == 0 { completedAt = endedAt }
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, title, shortLabel, estimateMinutes, completedAt
         case priority, completedMinutes, completedBlocks
