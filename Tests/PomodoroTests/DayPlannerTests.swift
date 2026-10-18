@@ -185,11 +185,34 @@ final class DayPlannerTests: XCTestCase {
         f.advance(35)
 
         let recovered = f.planner()
-        let yesterday = try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first)
-        XCTAssertEqual(yesterday.completedMinutes, 0)
-        XCTAssertFalse(yesterday.isDone)
-        XCTAssertTrue(recovered.tasks.isEmpty)
+        let carried = try XCTUnwrap(f.savedHistory()["2026-10-17"]?.first)
+        XCTAssertEqual(carried.title, "Paused yesterday")
+        XCTAssertEqual(carried.completedMinutes, 0)
+        XCTAssertFalse(carried.isDone)
+        XCTAssertEqual(recovered.tasks, [carried])
         XCTAssertNil(recovered.activeBlockID)
+    }
+
+    @MainActor func testUnfinishedTasksCarryOverAndFinishedOnesStay() async throws {
+        for relaunch in [false, true] {
+            let f = Fixture()
+            let p = f.planner()
+            let doneID = p.addTask(title: "Finished", minutes: 25)!
+            p.addTask(title: "Half done", minutes: 50)
+            p.addTask(title: "Not started", minutes: 25)
+            p.toggleDone(id: doneID)
+            p.startBlock(p.blocks.first { $0.title == "Half done" }!.id)
+            f.advance(25); p.tick()
+            f.advance(12 * 60)
+            let today = relaunch ? f.planner() : p
+            if !relaunch { p.checkForNewDay() }
+
+            XCTAssertEqual(today.tasks.map(\.title), ["Half done", "Not started"])
+            XCTAssertEqual(today.tasks.map(\.completedMinutes), [25, 0])
+            XCTAssertEqual(try f.savedHistory()["2026-10-16"]?.map(\.title), ["Finished"])
+            XCTAssertEqual(try f.savedHistory()["2026-10-17"]?.map(\.title), ["Half done", "Not started"])
+            XCTAssertEqual(f.planner().tasks.count, 2, "Carried once, not again on the next launch")
+        }
     }
 
     @MainActor func testRelaunchMidBlockAfterMidnightFinishesItInItsOwnDay() async throws {
@@ -232,8 +255,8 @@ final class DayPlannerTests: XCTestCase {
         f.advance(15); p.tick()
         XCTAssertEqual(f.sounds, 1)
         XCTAssertFalse(p.isRunning, "Yesterday's next block must not start on the new day")
-        XCTAssertTrue(p.tasks.isEmpty)
-        let late = try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first)
+        let late = try XCTUnwrap(f.savedHistory()["2026-10-17"]?.first)
+        XCTAssertEqual(p.tasks, [late], "Unfinished work carries over")
         XCTAssertEqual(late.completedMinutes, 25)
         XCTAssertFalse(late.isDone)
     }
@@ -252,8 +275,8 @@ final class DayPlannerTests: XCTestCase {
 
             XCTAssertEqual(f.sounds, 0, "No completion sound hours late")
             XCTAssertFalse(p.isRunning)
-            XCTAssertTrue(p.tasks.isEmpty)
-            XCTAssertEqual(try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first).completedMinutes, 25)
+            XCTAssertEqual(p.tasks.map(\.completedMinutes), [25])
+            XCTAssertNil(try f.savedHistory()["2026-10-16"])
         }
     }
 
