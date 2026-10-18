@@ -66,23 +66,22 @@ SPM_CACHE_FLAGS=(
 # Universal binary so Intel Macs can run it too.
 ARCH_FLAGS=(--arch arm64 --arch x86_64)
 
-# Release builds also list every string the code looks up, so an untranslated
-# one stops the release. Kept in .build: only recompiled files are re-listed.
-L10N_FLAGS=()
-STRINGS_DATA="$PWD/.build/localized-strings"
-if [ "$RELEASE_BUILD" = 1 ]; then
-  mkdir -p "$STRINGS_DATA"
-  L10N_FLAGS=(-Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$STRINGS_DATA")
-fi
-
-echo "==> swift build -c $CONFIG (arm64 + x86_64)"
-swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}" ${L10N_FLAGS[@]+"${L10N_FLAGS[@]}"}
-
+# A release stops if any string the code looks up isn't translated. The
+# universal build doesn't hand the compiler's list of strings on, so a build
+# for this Mac alone makes it. Kept in .build: only recompiled files are
+# re-listed.
 if [ "$RELEASE_BUILD" = 1 ]; then
   echo "==> Checking translations"
+  STRINGS_DATA="$PWD/.build/localized-strings"
+  mkdir -p "$STRINGS_DATA"
+  swift build -c "$CONFIG" "${SPM_CACHE_FLAGS[@]}" \
+    -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$STRINGS_DATA"
   /usr/bin/python3 Tools/check-localizations.py --stringsdata "$STRINGS_DATA" --sources Sources \
     Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings
 fi
+
+echo "==> swift build -c $CONFIG (arm64 + x86_64)"
+swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}"
 
 BIN_PATH="$(swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}" --show-bin-path)/Pomodoro"
 
