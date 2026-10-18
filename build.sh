@@ -180,7 +180,8 @@ else
 fi
 
 echo "==> Verifying signature"
-codesign --verify --deep --strict "$APP" && echo "    signature OK"
+codesign --verify --deep --strict "$APP"
+echo "    signature OK"
 
 echo "==> Built $APP"
 

@@ -40,6 +40,10 @@ private final class Fixture {
                    automaticallyUpdates: false, playCompletion: { self.sounds += 1 })
     }
     func advance(_ minutes: Int) { now = now.addingTimeInterval(Double(minutes * 60)) }
+    func savedHistory() throws -> [String: [DayTask]] {
+        let data = Data(defaults.string(forKey: "dayHistory")!.utf8)
+        return try JSONDecoder().decode([String: [DayTask]].self, from: data)
+    }
     func addMeeting(allDay: Bool = false) {
         calendar.isAuthorized = true
         let start = allDay ? Calendar.current.startOfDay(for: now) : now
@@ -101,6 +105,101 @@ final class DayPlannerTests: XCTestCase {
         XCTAssertEqual(recovered.tasks[0].completedMinutes, 25)
         XCTAssertFalse(recovered.isRunning)
         XCTAssertEqual(f.planner().tasks[0].completedMinutes, 25)
+    }
+
+    @MainActor func testOvernightRelaunchCreditsFinishedWorkToItsOwningDay() async throws {
+        let f = Fixture()
+        f.advance(11 * 60 + 30)
+        let p = f.planner()
+        p.addTask(title: "Yesterday", minutes: 25)
+        p.toggleRunPause()
+        let expectedEnd = f.now.addingTimeInterval(25 * 60)
+        f.advance(40)
+
+        let recovered = f.planner()
+        XCTAssertTrue(recovered.tasks.isEmpty)
+        XCTAssertFalse(recovered.isRunning)
+        XCTAssertNil(f.defaults.string(forKey: "activeBlockID"))
+        let yesterday = try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first)
+        XCTAssertEqual(yesterday.completedMinutes, 25)
+        XCTAssertEqual(yesterday.completedBlocks, 1)
+        XCTAssertEqual(yesterday.completedAt, expectedEnd)
+        XCTAssertFalse(recovered.blocks.contains { $0.isBreak })
+        XCTAssertEqual(f.sounds, 0, "Recovery should not play an old completion sound")
+
+        recovered.addTask(title: "Today", minutes: 25)
+        recovered.toggleRunPause()
+        f.advance(25); recovered.tick()
+        XCTAssertEqual(f.defaults.integer(forKey: "completedPomodoros"), 1)
+        XCTAssertEqual(f.defaults.string(forKey: "completedPomodorosDay"), "2026-10-17")
+        XCTAssertEqual(recovered.blocks.first?.kind, .shortBreak)
+    }
+
+    @MainActor func testOvernightRecoveryUsesFrozenDurationAndCannotCreditTheSameBlockTwice() async throws {
+        let f = Fixture()
+        f.advance(11 * 60 + 30)
+        let p = f.planner()
+        p.addTask(title: "Long task", minutes: 100)
+        p.toggleRunPause()
+        let savedID = p.activeBlockID
+        let savedEnd = f.defaults.object(forKey: "endDate")
+        p.workMinutes = 50
+        f.advance(40)
+        let today = DayTask(title: "Already saved for today", estimateMinutes: 50)
+        var history = try f.savedHistory()
+        history["2026-10-17"] = [today]
+        f.defaults.set(String(decoding: try JSONEncoder().encode(history), as: UTF8.self), forKey: "dayHistory")
+
+        let recovered = f.planner()
+        XCTAssertEqual(recovered.tasks, [today])
+        var yesterday = try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first)
+        XCTAssertEqual(yesterday.completedMinutes, 25)
+        XCTAssertEqual(yesterday.completedBlocks, 1)
+        XCTAssertFalse(yesterday.isDone)
+
+        // Simulate exit after history was saved but before timer state cleared.
+        f.defaults.set(savedID, forKey: "activeBlockID")
+        f.defaults.set(savedEnd, forKey: "endDate")
+        f.defaults.set(true, forKey: "isRunning")
+        f.defaults.set(25.0 * 60, forKey: "activeDuration")
+        _ = f.planner()
+        yesterday = try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first)
+        XCTAssertEqual(yesterday.completedMinutes, 25)
+        XCTAssertEqual(yesterday.completedBlocks, 1)
+        XCTAssertEqual(try f.savedHistory()["2026-10-17"], [today])
+    }
+
+    @MainActor func testOvernightRecoveryDoesNotCreditPausedWork() async throws {
+        let f = Fixture()
+        f.advance(11 * 60 + 30)
+        let p = f.planner()
+        p.addTask(title: "Paused yesterday", minutes: 25)
+        p.toggleRunPause()
+        f.advance(5); p.pause()
+        f.advance(35)
+
+        let recovered = f.planner()
+        let yesterday = try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first)
+        XCTAssertEqual(yesterday.completedMinutes, 0)
+        XCTAssertFalse(yesterday.isDone)
+        XCTAssertTrue(recovered.tasks.isEmpty)
+        XCTAssertNil(recovered.activeBlockID)
+    }
+
+    @MainActor func testOvernightRecoveryDoesNotCreditUnexpiredWork() async throws {
+        let f = Fixture()
+        f.advance(11 * 60 + 50)
+        let p = f.planner()
+        p.addTask(title: "Unfinished yesterday", minutes: 25)
+        p.toggleRunPause()
+        f.advance(15)
+
+        let recovered = f.planner()
+        let yesterday = try XCTUnwrap(f.savedHistory()["2026-10-16"]?.first)
+        XCTAssertEqual(yesterday.completedMinutes, 0)
+        XCTAssertFalse(yesterday.isDone)
+        XCTAssertTrue(recovered.tasks.isEmpty)
+        XCTAssertNil(recovered.activeBlockID)
     }
 
     @MainActor func testOlderSavedCountdownWithoutDurationStillRestores() async {
@@ -169,6 +268,131 @@ final class DayPlannerTests: XCTestCase {
         recovered.toggleRunPause()
         f.advance(4); recovered.tick()
         XCTAssertEqual(recovered.activeBlock?.kind, .work)
+    }
+
+    @MainActor func testClearAllPersistsRemovalOfOwedAndRunningBreaks() async {
+        for autoStart in [false, true] {
+            let f = Fixture(), p = f.planner()
+            p.addTask(title: "Work", minutes: 25)
+            p.autoStartNext = autoStart
+            p.toggleRunPause()
+            f.advance(25); p.tick()
+            XCTAssertNotNil(f.defaults.object(forKey: "pendingBreakEarnedAt"))
+            f.advance(1)
+            p.clearAll()
+
+            XCTAssertNil(f.defaults.object(forKey: "pendingBreakEarnedAt"))
+            XCTAssertNil(f.defaults.object(forKey: "pendingBreakIsLong"))
+            let recovered = f.planner()
+            XCTAssertTrue(recovered.tasks.isEmpty)
+            XCTAssertTrue(recovered.blocks.isEmpty)
+            XCTAssertNil(recovered.activeBlockID)
+            XCTAssertFalse(recovered.isRunning)
+        }
+    }
+
+    @MainActor func testStartingAnOngoingMeetingCountsDownToItsFixedEnd() async {
+        let f = Fixture()
+        f.addMeeting()
+        let p = f.planner()
+        p.refreshCalendar(force: true)
+        f.advance(10)
+        p.toggleRunPause()
+        XCTAssertEqual(p.remaining, 20 * 60)
+        XCTAssertEqual(f.defaults.object(forKey: "endDate") as? Date, f.calendar.events[0].end)
+        f.advance(19); p.tick()
+        XCTAssertEqual(p.remaining, 60)
+        f.advance(1); p.tick()
+        XCTAssertFalse(p.isRunning)
+        XCTAssertNil(p.activeBlockID)
+        XCTAssertEqual(f.sounds, 1)
+    }
+
+    @MainActor func testMeetingPauseResumeResetAndRelaunchKeepItsFixedEnd() async {
+        let f = Fixture()
+        f.addMeeting()
+        let p = f.planner()
+        p.refreshCalendar(force: true)
+        f.advance(10); p.toggleRunPause()
+        f.advance(2); p.pause()
+        f.advance(3)
+        let recovered = f.planner()
+        recovered.refreshCalendar(force: true)
+        XCTAssertFalse(recovered.isRunning)
+        XCTAssertEqual(recovered.remaining, 15 * 60)
+        f.advance(1); recovered.toggleRunPause()
+        XCTAssertEqual(recovered.remaining, 14 * 60)
+        XCTAssertEqual(f.defaults.object(forKey: "endDate") as? Date, f.calendar.events[0].end)
+        f.advance(1); recovered.resetActive()
+        XCTAssertFalse(recovered.isRunning)
+        XCTAssertEqual(recovered.remaining, 13 * 60)
+        f.advance(1); recovered.toggleRunPause()
+        XCTAssertEqual(recovered.remaining, 12 * 60)
+        let running = f.planner()
+        running.refreshCalendar(force: true)
+        XCTAssertTrue(running.isRunning)
+        XCTAssertEqual(running.remaining, 12 * 60)
+        f.advance(12); running.tick()
+        XCTAssertFalse(running.isRunning)
+    }
+
+    @MainActor func testMeetingRestorationCorrectsAnOldTimerEndAndDropsExpiredEvents() async {
+        for elapsed in [10, 35] {
+            let f = Fixture()
+            f.addMeeting()
+            let p = f.planner()
+            p.refreshCalendar(force: true)
+            p.toggleRunPause()
+            f.defaults.set(f.now.addingTimeInterval(60 * 60), forKey: "endDate")
+            f.advance(elapsed)
+            let recovered = f.planner()
+            recovered.refreshCalendar(force: true)
+            XCTAssertEqual(recovered.isRunning, elapsed < 30)
+            XCTAssertEqual(recovered.remaining, Double(max(0, 30 - elapsed) * 60))
+            if elapsed > 30 {
+                XCTAssertNil(recovered.activeBlockID)
+                recovered.startBlock(Scheduler.blockID(for: f.calendar.events[0]))
+                XCTAssertNil(recovered.activeBlockID)
+            } else {
+                XCTAssertEqual(f.defaults.object(forKey: "endDate") as? Date, f.calendar.events[0].end)
+            }
+        }
+    }
+
+    @MainActor func testExpiredPausedMeetingIsClearedByResumeOrReset() async {
+        for reset in [false, true] {
+            let f = Fixture()
+            f.addMeeting()
+            let p = f.planner()
+            p.refreshCalendar(force: true)
+            p.toggleRunPause()
+            f.advance(10); p.pause()
+            f.advance(25)
+            if reset { p.resetActive() } else { p.toggleRunPause() }
+            XCTAssertNil(p.activeBlockID)
+            XCTAssertFalse(p.isRunning)
+            XCTAssertEqual(p.remaining, 0)
+            XCTAssertNil(f.defaults.string(forKey: "activeBlockID"))
+        }
+    }
+
+    @MainActor func testCalendarRefreshUpdatesRunningMeetingDeadline() async {
+        let f = Fixture()
+        f.addMeeting()
+        let p = f.planner()
+        p.refreshCalendar(force: true)
+        p.toggleRunPause()
+        f.advance(10)
+        let event = f.calendar.events[0]
+        for remainingMinutes in [30, 5, 0] {
+            f.calendar.events = [Meeting(id: event.id, title: event.title, start: event.start,
+                end: f.now.addingTimeInterval(Double(remainingMinutes * 60)))]
+            p.refreshCalendar(force: true)
+            XCTAssertEqual(p.remaining, Double(remainingMinutes * 60))
+            XCTAssertEqual(p.isRunning, remainingMinutes > 0)
+        }
+        XCTAssertNil(p.activeBlockID)
+        XCTAssertEqual(f.sounds, 1)
     }
 
     @MainActor func testMeetingRestorationWaitsForCalendarForRunningAndPausedTimers() async {

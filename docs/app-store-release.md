@@ -12,6 +12,7 @@ Defaults were picked so the build works; change them before the first upload.
 | What | Default | Where to change it |
 |---|---|---|
 | Bundle ID | `com.codemoore.pomodoro.menubar` | `BUNDLE_ID` in `build-appstore.sh`. **Permanent** once an App Store Connect record uses it. |
+| Team ID | Required; no default | Set `TEAM_ID` to the 10-character ID in your Apple Developer account's Membership details. Use the team that owns the certificates and provisioning profile. |
 | Store name | your choice, see `app-store-listing.md` | App Store Connect. Must be unique on the store, 30 characters max. The menu bar and Finder still say "Pomodoro". |
 | Price | Free | App Store Connect, Pricing and Availability |
 | Icon | the Quiet Pomodoro icon (`Resources/AppIcon.icon`, copied from the iOS project) | Replace `Resources/AppIcon.icon` with another Icon Composer file. Reusing it on a separate listing is a brand call. |
@@ -42,10 +43,11 @@ repository; never commit them.
 
 ## Each release
 
-1. Build and package, pointing at the profile from step 3:
+1. Build and package, pointing at the profile from step 3. Replace
+   `YOUR_TEAM_ID` with your team's 10-character ID:
 
    ```sh
-   PROFILE=~/Downloads/<name>.provisionprofile ./build-appstore.sh
+   TEAM_ID=YOUR_TEAM_ID PROFILE=~/Downloads/<name>.provisionprofile ./build-appstore.sh
    ```
 
    It finds the certificates in your keychain, checks the bundle (no Sparkle,
