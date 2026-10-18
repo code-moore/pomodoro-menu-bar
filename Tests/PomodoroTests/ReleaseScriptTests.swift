@@ -1,10 +1,23 @@
 import XCTest
 
 final class ReleaseScriptTests: XCTestCase {
-    private func source() throws -> String {
+    private func source(_ path: String = "release.sh") throws -> String {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
-        return try String(contentsOf: root.appendingPathComponent("release.sh"), encoding: .utf8)
+        return try String(contentsOf: root.appendingPathComponent(path), encoding: .utf8)
+    }
+
+    private func runResult(_ script: String) throws -> (status: Int32, output: String) {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/bash")
+        process.arguments = ["-c", "set -euo pipefail\n" + script]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = output
+        try process.run()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        return (process.terminationStatus, String(decoding: data, as: UTF8.self))
     }
 
     /// Execute only the script's appcast decision, never build, sign or package.
@@ -39,6 +52,17 @@ final class ReleaseScriptTests: XCTestCase {
         XCTAssertNotEqual(try run(setup + "GEN_APPCAST=/usr/bin/false\n" + decision), 0)
         XCTAssertEqual(try run(setup + "GEN_APPCAST=/usr/bin/true\n" + decision), 0)
         XCTAssertNotEqual(try run(setup + "python3() { return 1; }\nGEN_APPCAST=/usr/bin/true\n" + decision), 0)
+    }
+
+    func testBuildFailsWhenCodeSignatureVerificationFails() throws {
+        let script = try source("build.sh")
+        let start = try XCTUnwrap(script.range(of: "echo \"==> Verifying signature\""))
+        let verification = String(script[start.lowerBound...])
+        let setup = "APP=Pomodoro.app\nWAS_RUNNING=0\n"
+        let rejected = try runResult(setup + "codesign() { return 1; }\n" + verification)
+        XCTAssertNotEqual(rejected.status, 0)
+        XCTAssertFalse(rejected.output.contains("==> Built"))
+        XCTAssertEqual(try run(setup + "codesign() { return 0; }\n" + verification), 0)
     }
 
     func testEmptyToolDiscoveryIsAnError() throws {

@@ -228,6 +228,7 @@ final class DayPlanner: ObservableObject {
             historyLoadError = "saved task history couldn't be read; the raw copy was kept in '\(Key.historyBackup)'"
         }
         currentDayKey = Self.dayKey(for: now())
+        recoverExpiredHistoricalWork()
         tasks = history[currentDayKey] ?? []
 
         // Today's pomodoro count and any break still owed. Yesterday's count
@@ -278,16 +279,22 @@ final class DayPlanner: ObservableObject {
             stopCountdown()
             return
         }
-        activeDuration = activeDuration ?? block.duration
-        if saved.running, let end = saved.end, end > now() {
+        activeDuration = block.isMeeting ? block.duration : (activeDuration ?? block.duration)
+        // Calendar events keep their fixed end even if an older saved timer
+        // was started late, or the event changed while the app was closed.
+        let restoredEnd = block.isMeeting ? block.end : saved.end
+        if saved.running, let end = restoredEnd, end > now() {
             remaining = end.timeIntervalSince(now())
             endDate = end
             isRunning = true
             lastPublishedSecond = -1
             startTicker()
-        } else if saved.running, let end = saved.end {
+        } else if saved.running, let end = restoredEnd {
             bankActiveBlock(endedAt: end)
             stopCountdown()
+        } else if block.isMeeting {
+            remaining = max(0, block.end.timeIntervalSince(now()))
+            if remaining <= 0 { stopCountdown() }
         } else if saved.remaining > 0 {
             remaining = min(saved.remaining, activeDuration ?? block.duration)
         } else {
@@ -512,6 +519,7 @@ final class DayPlanner: ObservableObject {
     func clearAll() {
         stopCountdown()
         pendingBreak = nil
+        persistProgress()
 
         tasks.removeAll()
         meetings = calendar.isAuthorized ? calendar.meetings(on: now(), excluding: excludedCalendarIDs) : []
@@ -530,6 +538,14 @@ final class DayPlanner: ObservableObject {
 
     func startBlock(_ id: ScheduledBlock.ID) {
         guard var block = blocks.first(where: { $0.id == id }), !block.isAllDay else { return }
+        if block.isMeeting, block.end <= now() {
+            if activeBlockID == block.id {
+                stopCountdown()
+                reschedule()
+                persistState()
+            }
+            return
+        }
         pendingMeetingRestore = nil
 
         // Any of a task's blocks means "work on this task now", which is its
@@ -549,16 +565,19 @@ final class DayPlanner: ObservableObject {
             // Getting back to work skips whatever was left of the break.
             if block.kind == .work { pendingBreak = nil }
         }
+        if block.isMeeting {
+            remaining = block.end.timeIntervalSince(now())
+        }
 
         if !isRunning {
             if remaining <= 0 { remaining = activeDuration ?? block.duration }
-            endDate = now().addingTimeInterval(remaining)
+            endDate = block.isMeeting ? block.end : now().addingTimeInterval(remaining)
             isRunning = true
             startTicker()
         } else if changed {
             // Switched to another block mid-countdown: it gets its own full
             // time, rather than whatever was left of the one before.
-            endDate = now().addingTimeInterval(remaining)
+            endDate = block.isMeeting ? block.end : now().addingTimeInterval(remaining)
         }
         // The task being worked on goes to the front of the plan, starting
         // now, and everything else moves to fit around it.
@@ -588,8 +607,9 @@ final class DayPlanner: ObservableObject {
     func resetActive() {
         pause()
         guard let block = activeBlock else { return }
-        remaining = activeDuration ?? block.duration
-        // Back to a full block, starting from now.
+        remaining = block.isMeeting ? max(0, block.end.timeIntervalSince(now())) : (activeDuration ?? block.duration)
+        if block.isMeeting, remaining <= 0 { stopCountdown() }
+        // Work and breaks reset to their full length; meetings keep their end.
         reschedule()
         persistState()
     }
@@ -677,6 +697,12 @@ final class DayPlanner: ObservableObject {
         lastCalendarRefresh = now()
         meetings = calendar.meetings(on: now(), excluding: excludedCalendarIDs)
         reschedule()
+        if isRunning, let block = activeBlock, block.isMeeting {
+            // Calendar edits can shorten or extend an event while it runs.
+            activeDuration = block.duration
+            endDate = block.end
+            tick()
+        }
         if let saved = pendingMeetingRestore {
             pendingMeetingRestore = nil
             restoreCountdown(saved)
@@ -907,6 +933,36 @@ final class DayPlanner: ObservableObject {
     }
 
     // MARK: - Persistence
+
+    /// Recover finished work before selecting today's tasks. Its owner may
+    /// only exist in yesterday's history, which today's timeline cannot find.
+    private func recoverExpiredHistoricalWork() {
+        guard defaults.bool(forKey: Key.isRunning),
+              let end = defaults.object(forKey: Key.endDate) as? Date, end <= now(),
+              let id = defaults.string(forKey: Key.activeBlock) else { return }
+
+        for day in history.keys where day != currentDayKey {
+            guard var dayTasks = history[day],
+                  let index = dayTasks.firstIndex(where: {
+                      !$0.isDone && id == "\($0.id.uuidString)-work-\(max(0, $0.completedBlocks) + 1)"
+                  }) else { continue }
+
+            let frozenMinutes = (defaults.object(forKey: Key.activeDuration) as? TimeInterval)
+                .flatMap { $0.isFinite && $0 > 0 ? Int(exactly: ($0 / 60).rounded()) : nil }
+            let minutes = frozenMinutes ?? min(max(1, workMinutes), dayTasks[index].remainingMinutes,
+                                               Scheduler.maxTaskMinutes)
+            dayTasks[index].completedMinutes += minutes
+            dayTasks[index].completedBlocks += 1
+            if dayTasks[index].remainingMinutes == 0 {
+                dayTasks[index].completedAt = end
+            }
+            history[day] = dayTasks
+            // Advancing completedBlocks also makes a repeat recovery harmless
+            // if the app exits before clearing the saved countdown below.
+            saveHistory()
+            return
+        }
+    }
 
     private func persistToday() {
         history[currentDayKey] = tasks

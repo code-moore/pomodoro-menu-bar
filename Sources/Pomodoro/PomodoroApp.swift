@@ -366,6 +366,7 @@ struct DayPlanMenu: View {
                                 isPast: block.end <= planner.clock,
                                 canEditTask: block.taskID != nil,
                                 taskIsDone: task?.isDone ?? false,
+                                taskTitle: task?.title ?? block.title,
                                 taskEstimateMinutes: task?.estimateMinutes ?? 0,
                                 taskPriority: task?.priority ?? .leastUrgent,
                                 isSelected: selectedBlockID == block.id,
@@ -762,6 +763,8 @@ struct BlockRow: View {
     /// False for calendar events, which can't be edited or deleted from here.
     let canEditTask: Bool
     let taskIsDone: Bool
+    /// Break rows edit their owning task, whose name differs from the row label.
+    let taskTitle: String
     /// The owning task's full estimate — not this block's chunk length — so the
     /// editor shows the whole duration rather than just one pomodoro.
     let taskEstimateMinutes: Int
@@ -993,7 +996,7 @@ struct BlockRow: View {
     }
 
     private func beginEdit() {
-        draftTitle = block.title
+        draftTitle = taskTitle
         let hours = taskEstimateMinutes / 60
         let minutes = taskEstimateMinutes % 60
         // A zero shows as an empty box, so its placeholder names the unit.

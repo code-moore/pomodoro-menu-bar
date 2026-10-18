@@ -7,8 +7,8 @@
 # a privacy manifest. The result is a .pkg in dist/AppStore/ to upload with
 # Transporter or Xcode's Organizer.
 #
-#   ./build-appstore.sh
-#   PROFILE=~/Downloads/Pomodoro_Mac_App_Store.provisionprofile ./build-appstore.sh
+#   TEAM_ID=YOUR_TEAM_ID ./build-appstore.sh
+#   TEAM_ID=YOUR_TEAM_ID PROFILE=~/Downloads/Pomodoro_Mac_App_Store.provisionprofile ./build-appstore.sh
 #
 # Settings below can be overridden from the environment. The bundle ID is
 # permanent once an App Store Connect record uses it, so confirm it then.
@@ -18,8 +18,10 @@ cd "$(dirname "$0")"
 
 BUNDLE_ID="${BUNDLE_ID:-com.codemoore.pomodoro.menubar}"
 TEAM_ID="${TEAM_ID:-}"
-if [ -z "$TEAM_ID" ]; then
-  echo 'ERROR: set TEAM_ID or configure .signing.local.sh from signing.example.sh.' >&2
+if [[ ! "$TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+  echo 'ERROR: Set TEAM_ID to your 10-character Apple Developer team ID (A-Z and 0-9),' >&2
+  echo '       or configure .signing.local.sh from signing.example.sh.' >&2
+  echo '       Find it in your developer account under Membership details.' >&2
   exit 1
 fi
 APP_NAME="Pomodoro"
