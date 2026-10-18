@@ -66,18 +66,9 @@ SPM_CACHE_FLAGS=(
 # Universal binary so Intel Macs can run it too.
 ARCH_FLAGS=(--arch arm64 --arch x86_64)
 
-# A release stops if any string the code looks up isn't translated. The
-# universal build doesn't hand the compiler's list of strings on, so a build
-# for this Mac alone makes it. Kept in .build: only recompiled files are
-# re-listed.
+# A release stops if any string the code looks up isn't translated.
 if [ "$RELEASE_BUILD" = 1 ]; then
-  echo "==> Checking translations"
-  STRINGS_DATA="$PWD/.build/localized-strings"
-  mkdir -p "$STRINGS_DATA"
-  swift build -c "$CONFIG" "${SPM_CACHE_FLAGS[@]}" \
-    -Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$STRINGS_DATA"
-  /usr/bin/python3 Tools/check-localizations.py --stringsdata "$STRINGS_DATA" --sources Sources \
-    Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings
+  Tools/check-release-localizations.sh -c "$CONFIG" "${SPM_CACHE_FLAGS[@]}"
 fi
 
 echo "==> swift build -c $CONFIG (arm64 + x86_64)"

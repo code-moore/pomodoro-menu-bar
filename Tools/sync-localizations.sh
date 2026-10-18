@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Brings Resources/Localizable.xcstrings in line with the code: strings new in
-# the code are added (in English only, for translating) and ones the code no
-# longer uses are marked stale. Then translate, and check with
+# Adds strings new in the code to Resources/Localizable.xcstrings, in English
+# only, for translating. Strings the code no longer uses stay until deleted by
+# hand: Tools/check-release-localizations.sh names them. Then translate, and
+# check with
 #   python3 Tools/check-localizations.py Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings
 # Release builds run that check too, against the strings in the code.
 set -euo pipefail

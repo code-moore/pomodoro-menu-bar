@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Checks the app's String Catalogs before a release.
 
-  check-localizations.py [--stringsdata DIR --sources DIR] CATALOG...
+  check-localizations.py [--stringsdata DIR --sources DIR [--allow-unused]] CATALOG...
 
 Every string must be translated into every language the app ships, keep the
 English placeholders, and use no em dashes. With --stringsdata (what swiftc
@@ -10,7 +10,8 @@ exactly the strings the code looks up: a new string with no translations
 would show in English, and a stale one is translation work for nothing.
 swiftc writes one file per source file and only for files it recompiles, so
 the folder is kept between builds and, with --sources, only files whose
-source still exists count.
+source still exists count. --allow-unused is for the App Store build, which
+leaves out some of the strings the catalog holds for the direct build.
 """
 
 import argparse
@@ -104,6 +105,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--stringsdata")
     parser.add_argument("--sources")
+    parser.add_argument("--allow-unused", action="store_true")
     parser.add_argument("catalogs", nargs="+")
     args = parser.parse_args()
 
@@ -118,7 +120,8 @@ def main():
                 problems.append(f"no strings found in {args.stringsdata}")
             in_catalog = set(catalog["strings"])
             problems += [f"{table}: {k!r} is in the code but not the catalog" for k in sorted(in_code - in_catalog)]
-            problems += [f"{table}: {k!r} is in the catalog but no longer in the code" for k in sorted(in_catalog - in_code)]
+            if not args.allow_unused:
+                problems += [f"{table}: {k!r} is in the catalog but no longer in the code" for k in sorted(in_catalog - in_code)]
 
     for problem in problems:
         print(f"ERROR: {problem}", file=sys.stderr)

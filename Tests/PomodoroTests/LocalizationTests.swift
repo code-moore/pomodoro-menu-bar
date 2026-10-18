@@ -35,6 +35,7 @@ final class LocalizationTests: XCTestCase {
                 XCTAssertTrue(source.contains(catalog), "\(script) doesn't compile \(catalog)")
             }
             XCTAssertTrue(source.contains("xcstringstool compile"), script)
+            XCTAssertTrue(source.contains("Tools/check-release-localizations.sh"), "\(script) doesn't check the translations")
         }
     }
 
@@ -51,16 +52,27 @@ final class LocalizationTests: XCTestCase {
             return ["sourceLanguage": "en", "version": "1.0",
                     "strings": ["Finish %@": ["localizations": localizations]]]
         }
-        func run(_ catalog: [String: Any], code keys: [String] = ["Finish %@"]) throws -> (status: Int32, output: String) {
+        func run(_ catalog: [String: Any], code keys: [String] = ["Finish %@"],
+                 options: [String] = []) throws -> (status: Int32, output: String) {
             let path = directory.appendingPathComponent("Localizable.xcstrings")
             try JSONSerialization.data(withJSONObject: catalog).write(to: path)
             let entries = keys.map { ["key": $0, "comment": ""] }
             try JSONSerialization.data(withJSONObject: ["tables": ["Localizable": entries]])
                 .write(to: directory.appendingPathComponent("App.stringsdata"))
-            return try check(["--stringsdata", directory.path, path.path])
+            return try check(["--stringsdata", directory.path] + options + [path.path])
         }
 
         XCTAssertEqual(try run(catalog { "\($0) %@" }).status, 0)
+
+        // The App Store build leaves some strings out, but must still have
+        // every string it does use.
+        var full = catalog { "\($0) %@" }
+        var strings = full["strings"] as! [String: [String: Any]]
+        strings["Update to %@"] = strings["Finish %@"]
+        full["strings"] = strings
+        XCTAssertEqual(try run(full, options: ["--allow-unused"]).status, 0)
+        XCTAssertNotEqual(try run(full).status, 0)
+        XCTAssertNotEqual(try run(full, code: ["Finish %@", "Start"], options: ["--allow-unused"]).status, 0)
 
         let cases: [(String, [String: Any], [String])] = [
             ("dropped placeholder", catalog { $0 == "ja" ? "終了" : "\($0) %@" }, ["Finish %@"]),
