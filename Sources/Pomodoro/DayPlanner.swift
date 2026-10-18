@@ -194,6 +194,8 @@ final class DayPlanner: ObservableObject {
         /// The day the countdown was started on, so overnight work is
         /// credited to the right day's task.
         static let activeDay = "activeDay"
+        /// The last day unfinished tasks were checked for carrying over.
+        static let carryOverDay = "carryOverDay"
         static let completedPomodoros = "completedPomodoros"
         static let completedPomodorosDay = "completedPomodorosDay"
         static let breakEarnedAt = "pendingBreakEarnedAt"
@@ -1052,13 +1054,16 @@ final class DayPlanner: ObservableObject {
 
     /// Tasks not finished on the last day the app was used move on to today,
     /// with the work already done on them. Finished ones stay with their day.
-    /// Only into a day not seen before, so it happens once, at the turn of the
-    /// day or on the first launch of a new one. A day emptied with Clear all
-    /// has been seen, and stays empty: checking for no tasks instead reached
-    /// one day further back on every relaunch.
+    /// Only into an empty day, and checked once a day, at the turn of the day
+    /// or on the first launch of a new one. A day emptied with Clear all
+    /// stays empty: checking on every launch reached one day further back
+    /// each time. Older versions saved an empty day at midnight, so a saved
+    /// day alone doesn't mean it was checked.
     @discardableResult
     private func carryOverUnfinishedTasks() -> Bool {
-        guard history[currentDayKey] == nil,
+        guard defaults.string(forKey: Key.carryOverDay) != currentDayKey else { return false }
+        defaults.set(currentDayKey, forKey: Key.carryOverDay)
+        guard tasks.isEmpty,
               let previous = history.keys.filter({ $0 < currentDayKey }).max(),
               let earlier = history[previous] else { return false }
         let unfinished = earlier.filter { !$0.isDone }

@@ -219,6 +219,14 @@ final class DayPlannerTests: XCTestCase {
         }
     }
 
+    @MainActor func testUpdateAfterAnOlderVersionRanOvernightStillCarriesOver() async throws {
+        let f = Fixture()
+        // Older versions saved an empty day at midnight.
+        let history = ["2026-10-15": [DayTask(title: "Yesterday")], "2026-10-16": []]
+        f.defaults.set(String(decoding: try JSONEncoder().encode(history), as: UTF8.self), forKey: "dayHistory")
+        XCTAssertEqual(f.planner().tasks.map(\.title), ["Yesterday"])
+    }
+
     @MainActor func testClearedDayDoesNotBringBackOlderUnfinishedTasks() async throws {
         let f = Fixture()
         // Versions before carry-over left unfinished tasks on every past day.
