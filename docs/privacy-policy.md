@@ -22,8 +22,10 @@ tracking.
   them in its own container, which macOS removes with the app.
 - **Your calendar**, if you allow access: Pomodoro reads today's events from
   the calendars on your Mac so it can schedule your tasks around them. Events
-  are read on your Mac, used only to build your day's plan, and are not
-  stored by the app or sent anywhere. You can turn individual calendars off in
+  are read on your Mac, used only to build your day's plan, and never sent
+  anywhere. Their titles, notes and attendees are never saved. While you
+  count a meeting down, the app keeps that event's identifier and end time,
+  so the countdown survives a restart. Events marked Free are left out. You can turn individual calendars off in
   Settings, and withdraw access at any time in System Settings > Privacy &
   Security > Calendars.
 

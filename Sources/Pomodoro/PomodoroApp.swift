@@ -78,6 +78,16 @@ struct DayPlanMenu: View {
                 header
                 controls
 
+                if planner.historyLoadError != nil {
+                    // Rare, but silently showing an empty day would look like
+                    // the tasks were deleted.
+                    Label("Your saved tasks couldn't be read. A copy was kept so they can be recovered: see quietpomodoro.com/support.",
+                          systemImage: "exclamationmark.triangle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 // The footer's fold chevron has to stay reachable, so with the
                 // list folded away the footer moves up into this card.
                 if planner.panelCollapsed {
@@ -389,13 +399,6 @@ struct DayPlanMenu: View {
                                 isSelected: selectedBlockID == block.id,
                                 displayMinutes: row.minutes,
                                 disclosure: disclosure(for: row, blockCounts: blockCounts),
-                                onStart: {
-                                    if block.id == planner.activeBlockID {
-                                        planner.toggleRunPause()
-                                    } else {
-                                        planner.startBlock(block.id)
-                                    }
-                                },
                                 onToggleDone: {
                                     guard let taskID = block.taskID else { return }
                                     tick(taskID)
@@ -812,7 +815,6 @@ struct BlockRow: View {
     var displayMinutes: Int? = nil
     /// Set on a task that has breaks: whether they're folded into this row.
     var disclosure: Disclosure? = nil
-    let onStart: () -> Void
     let onToggleDone: () -> Void
     let onDeleteTask: () -> Void
     let onUpdateTask: (String, Int, TaskPriority) -> Void

@@ -50,6 +50,42 @@ final class UpdaterRecorder: NSObject, SPUUpdaterDelegate {
     }
 }
 
+/// Sparkle's gentle reminders, as its documentation recommends for a menu
+/// bar app. With no Dock icon or window, an update found by a scheduled check
+/// would otherwise open behind other apps, unnoticed, so the app steps into
+/// the Dock while the update is on screen and back out when it's done.
+///
+/// Not `@MainActor`, for the same reason as `UpdaterRecorder`. Sparkle calls
+/// these on the main thread.
+final class UpdateReminder: NSObject, SPUStandardUserDriverDelegate {
+    var supportsGentleScheduledUpdateReminders: Bool { true }
+
+    func standardUserDriverWillHandleShowingUpdate(
+        _ handleShowingUpdate: Bool,
+        forUpdate update: SUAppcastItem,
+        state: SPUUserUpdateState
+    ) {
+        MainActor.assumeIsolated {
+            NSApp.setActivationPolicy(.regular)
+            if !state.userInitiated {
+                NSApp.dockTile.badgeLabel = "1"
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
+    }
+
+    func standardUserDriverDidReceiveUserAttention(forUpdate update: SUAppcastItem) {
+        MainActor.assumeIsolated { NSApp.dockTile.badgeLabel = nil }
+    }
+
+    func standardUserDriverWillFinishUpdateSession() {
+        MainActor.assumeIsolated {
+            NSApp.dockTile.badgeLabel = nil
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+}
+
 /// Thin wrapper around Sparkle's standard updater.
 ///
 /// Sparkle is only started when the build is genuinely configured for updates —
@@ -61,6 +97,7 @@ final class UpdaterRecorder: NSObject, SPUUpdaterDelegate {
 final class UpdateController: NSObject, ObservableObject {
     private var controller: SPUStandardUpdaterController?
     private let recorder = UpdaterRecorder()
+    private let reminder = UpdateReminder()
     private let feedURL: String
     private let publicKeyPresent: Bool
     private let misconfiguration: String?
@@ -90,7 +127,7 @@ final class UpdateController: NSObject, ObservableObject {
             controller = SPUStandardUpdaterController(
                 startingUpdater: true,
                 updaterDelegate: recorder,
-                userDriverDelegate: nil
+                userDriverDelegate: reminder
             )
         }
 

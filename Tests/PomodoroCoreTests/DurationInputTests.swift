@@ -25,6 +25,11 @@ final class DurationInputTests: XCTestCase {
 
     // MARK: - Minutes
 
+    func testPastedTrailingNewlineIsIgnored() {
+        XCTAssertEqual(DurationInput.minutes(in: "25\n", unit: .minutes), 25)
+        XCTAssertTrue(DurationInput.isBlank(" \n"))
+    }
+
     func testWholeMinutes() {
         XCTAssertEqual(DurationInput.minutes(in: "25", unit: .minutes), 25)
         XCTAssertEqual(DurationInput.minutes(in: "0", unit: .minutes), 0)

@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import CryptoKit
 import EventKit
 import PomodoroCore
 
@@ -121,7 +122,8 @@ final class CalendarService: PlannerCalendar {
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: included)
 
         return store.events(matching: predicate)
-            .filter { $0.status != .canceled && !Self.isDeclined($0) }
+            // Free time, like a declined invite, doesn't keep you busy.
+            .filter { $0.status != .canceled && $0.availability != .free && !Self.isDeclined($0) }
             .map { event in
                 // Calendar names often arrive with padding ("General ").
                 let calendarName = event.calendar?.title
@@ -129,12 +131,19 @@ final class CalendarService: PlannerCalendar {
                 let title = event.title?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let notes = event.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
 
+                // Only today's part of an event counts. One that spans the
+                // whole day, like a timed "Out of office" over a weekend, is a
+                // banner like an all-day event, not a block to count down.
+                let eventStart = max(event.startDate, start)
+                let eventEnd = min(event.endDate, end)
+                let coversDay = event.startDate <= start && event.endDate >= end
+
                 return Meeting(
                     id: Self.stableID(for: event),
                     title: (title?.isEmpty == false) ? title! : "Untitled event",
-                    start: event.startDate,
-                    end: event.endDate,
-                    isAllDay: event.isAllDay,
+                    start: coversDay ? start : eventStart,
+                    end: coversDay ? end : eventEnd,
+                    isAllDay: event.isAllDay || coversDay,
                     calendarName: (calendarName?.isEmpty == false) ? calendarName : nil,
                     notes: (notes?.isEmpty == false) ? notes : nil
                 )
@@ -154,13 +163,24 @@ final class CalendarService: PlannerCalendar {
     /// Falling back to `UUID()` gave the same event a different id on every
     /// refresh, so its timeline block was treated as brand new each time — the
     /// row flickered and any countdown running on it was cancelled. Deriving
-    /// the fallback from the event's own content keeps it stable.
-    private static func stableID(for event: EKEvent) -> String {
-        if let identifier = event.eventIdentifier, !identifier.isEmpty {
-            return identifier
+    /// the fallback from the event's own content keeps it stable. It's hashed,
+    /// because the id is saved while the event is counted down, and the
+    /// event's title must not be.
+    nonisolated static func stableID(for event: EKEvent) -> String {
+        let identifier = event.eventIdentifier.flatMap { $0.isEmpty ? nil : $0 }
+            ?? fallbackID(title: event.title, start: event.startDate, end: event.endDate,
+                          calendar: event.calendar?.calendarIdentifier)
+        // Every occurrence of a repeating event shares its identifier, and an
+        // overnight one appears twice in a day. The occurrence's original date
+        // tells them apart, and stays put if that occurrence is moved.
+        if event.hasRecurrenceRules || event.isDetached, let occurrence = event.occurrenceDate {
+            return "\(identifier)@\(Int(occurrence.timeIntervalSince1970))"
         }
-        let start = event.startDate?.timeIntervalSince1970 ?? 0
-        let end = event.endDate?.timeIntervalSince1970 ?? 0
-        return "\(event.title ?? "")|\(start)|\(end)|\(event.calendar?.calendarIdentifier ?? "")"
+        return identifier
+    }
+
+    nonisolated static func fallbackID(title: String?, start: Date?, end: Date?, calendar: String?) -> String {
+        let content = "\(title ?? "")|\(start?.timeIntervalSince1970 ?? 0)|\(end?.timeIntervalSince1970 ?? 0)|\(calendar ?? "")"
+        return SHA256.hash(data: Data(content.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 }

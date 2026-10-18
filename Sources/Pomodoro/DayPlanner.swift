@@ -143,6 +143,9 @@ final class DayPlanner: ObservableObject {
     private var currentDayKey = ""
     private var endDate: Date?
     private var ticker: Timer?
+    /// Keeps App Nap from delaying the ticker, and so the completion sound,
+    /// while a block counts down. Idle system sleep is still allowed.
+    private var countdownActivity: NSObjectProtocol?
     private var minuteTimer: Timer?
     private var lastPublishedSecond = -1
     private var lastCalendarRefresh = Date.distantPast
@@ -214,11 +217,12 @@ final class DayPlanner: ObservableObject {
         finishHour = min(23, max(0, defaults.object(forKey: "finishHour") as? Int ?? Self.defaultFinishHour))
         finishMinute = min(59, max(0, defaults.object(forKey: "finishMinute") as? Int ?? Self.defaultFinishMinute))
         showLabelInMenuBar = defaults.object(forKey: Key.showLabel) as? Bool ?? true
-        workMinutes = defaults.object(forKey: Key.workMinutes) as? Int ?? 25
-        shortBreakMinutes = defaults.object(forKey: Key.shortBreakMinutes) as? Int ?? 5
-        longBreakMinutes = defaults.object(forKey: Key.longBreakMinutes) as? Int ?? 15
-        dayStartHour = defaults.object(forKey: Key.dayStartHour) as? Int ?? 9
-        dayStartMinute = defaults.object(forKey: Key.dayStartMinute) as? Int ?? 0
+        // Clamped to the ranges Settings allows, in case the file was edited.
+        workMinutes = Self.stored(Key.workMinutes, in: defaults, default: 25, range: 5...120)
+        shortBreakMinutes = Self.stored(Key.shortBreakMinutes, in: defaults, default: 5, range: 1...30)
+        longBreakMinutes = Self.stored(Key.longBreakMinutes, in: defaults, default: 15, range: 1...60)
+        dayStartHour = Self.stored(Key.dayStartHour, in: defaults, default: 9, range: 0...23)
+        dayStartMinute = Self.stored(Key.dayStartMinute, in: defaults, default: 0, range: 0...59)
         autoStartNext = defaults.object(forKey: Key.autoStartNext) as? Bool ?? false
         excludedCalendarIDs = Set(defaults.stringArray(forKey: Key.excludedCalendars) ?? [])
 
@@ -588,7 +592,10 @@ final class DayPlanner: ObservableObject {
             remaining = block.duration
             lastPublishedSecond = -1
             // Getting back to work skips whatever was left of the break.
-            if block.kind == .work { pendingBreak = nil }
+            if block.kind == .work, pendingBreak != nil {
+                pendingBreak = nil
+                persistProgress()
+            }
         }
 
         if block.isMeeting {
@@ -972,28 +979,37 @@ final class DayPlanner: ObservableObject {
         }
         RunLoop.main.add(ticker, forMode: .common)
         self.ticker = ticker
+        countdownActivity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep, reason: "Counting down a block")
     }
 
     private func stopTicker() {
         ticker?.invalidate()
         ticker = nil
+        if let countdownActivity { ProcessInfo.processInfo.endActivity(countdownActivity) }
+        countdownActivity = nil
     }
 
-    /// Once a minute: day rollover, calendar refresh, and a UI pulse so
-    /// time-dependent labels update while idle.
     private func startMinuteTimer() {
         minuteTimer?.invalidate()
         guard automaticallyUpdates else { return }
         let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                self.clock = self.now()
-                self.checkForNewDay()
-                self.refreshCalendar()
-            }
+            MainActor.assumeIsolated { self?.minuteTick() }
         }
         RunLoop.main.add(timer, forMode: .common)
         minuteTimer = timer
+    }
+
+    /// Once a minute: day rollover, calendar refresh, and a UI pulse so
+    /// time-dependent labels update while idle.
+    func minuteTick() {
+        clock = now()
+        checkForNewDay()
+        refreshCalendar()
+        // With nothing counting down, lay the plan out from now again, as
+        // Start would, so the menu bar doesn't show a block whose slot has
+        // passed. The calendar refresh above only does this every 5 minutes.
+        if activeBlockID == nil { reschedule() }
     }
 
     // MARK: - Day rollover
@@ -1110,9 +1126,24 @@ final class DayPlanner: ObservableObject {
     /// Stored as a JSON *string* rather than `Data` so the contents stay
     /// readable via `defaults read` while developing.
     private func saveHistory() {
+        pruneHistory()
         guard let data = try? JSONEncoder().encode(history),
               let json = String(data: data, encoding: .utf8) else { return }
         defaults.set(json, forKey: Key.history)
+    }
+
+    /// Past days aren't shown anywhere; they're kept so work running across
+    /// midnight can be credited to its day. Without a limit the whole history
+    /// is rewritten on every change, growing for ever.
+    private static let historyDays = 90
+
+    private func pruneHistory() {
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -Self.historyDays, to: now()) else { return }
+        let oldest = Self.dayKey(for: cutoff)
+        // Day keys are yyyy-MM-dd, so they sort as dates.
+        history = history.filter { day, tasks in
+            day == currentDayKey || (day >= oldest && !tasks.isEmpty)
+        }
     }
 
     /// Returns the decoded history plus, on failure, the raw payload so the
@@ -1126,6 +1157,11 @@ final class DayPlanner: ObservableObject {
               let decoded = try? JSONDecoder().decode([String: [DayTask]].self, from: data)
         else { return ([:], json) }
         return (decoded, nil)
+    }
+
+    private static func stored(_ key: String, in defaults: UserDefaults,
+                               default value: Int, range: ClosedRange<Int>) -> Int {
+        min(max(defaults.object(forKey: key) as? Int ?? value, range.lowerBound), range.upperBound)
     }
 
     private static func clampEstimate(_ minutes: Int) -> Int {

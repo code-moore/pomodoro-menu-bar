@@ -153,6 +153,8 @@ sign() {
   # one; the Sparkle pieces inside it keep their own.
   local entitlements=()
   [ -n "${2:-}" ] && entitlements=(--entitlements "$2")
+  # Optional third argument: an extra codesign flag.
+  [ -n "${3:-}" ] && entitlements+=("$3")
   # Timestamping needs Apple's server; fall back to a plain hardened signature
   # if it is unreachable (it is required for notarization, not for local use).
   if [ "$RELEASE_BUILD" = 1 ]; then
@@ -179,7 +181,12 @@ if [ -n "$SIGN_IDENTITY" ] && security find-identity -v -p codesigning 2>/dev/nu
   if [ -d "$V/XPCServices" ]; then
     for xpc in "$V"/XPCServices/*.xpc; do
       [ -e "$xpc" ] || continue
-      sign "$xpc"
+      if [ "$(basename "$xpc")" = Downloader.xpc ]; then
+        # Sparkle ships it with entitlements of its own; re-signing drops them.
+        sign "$xpc" "" --preserve-metadata=entitlements
+      else
+        sign "$xpc"
+      fi
     done
   fi
   [ -e "$V/Updater.app" ] && sign "$V/Updater.app"

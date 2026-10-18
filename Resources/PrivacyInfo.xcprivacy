@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Privacy manifest. Nothing leaves the Mac: tasks and settings live in the
-  app's own UserDefaults, and calendar events are read on the device and never
-  stored or sent anywhere, so no data types are "collected" in Apple's sense.
+  Privacy manifest. Tasks and settings live in the app's own UserDefaults, and
+  calendar events are read on the device and never sent anywhere; only the id
+  and end of an event being counted down are kept, so the countdown survives a
+  restart. The website build's update checks fetch our appcast and send nothing
+  else. No data types are "collected" in Apple's sense.
   UserDefaults is a required-reason API; CA92.1 is "read and write data that
   is only accessible to the app itself".
 -->

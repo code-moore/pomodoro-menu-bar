@@ -257,6 +257,51 @@ final class DayPlannerTests: XCTestCase {
         }
     }
 
+    @MainActor func testIdlePlanFollowsTheClockBetweenCalendarReads() async {
+        let f = Fixture()
+        f.calendar.isAuthorized = true
+        let p = f.planner()
+        p.refreshCalendar(force: true)
+        let first = p.addTask(title: "A", minutes: 25)
+        p.addTask(title: "B", minutes: 25)
+        f.advance(26); p.minuteTick()
+        XCTAssertEqual(p.displayBlock?.taskID, first)
+        XCTAssertEqual(p.displayBlock?.start, f.now)
+    }
+
+    @MainActor func testHistoryKeepsRecentDaysOnly() async throws {
+        let f = Fixture()
+        let old = DayTask(title: "Long ago"), recent = DayTask(title: "Last week")
+        let history = ["2026-07-01": [old], "2026-10-09": [recent], "2026-10-10": []]
+        f.defaults.set(String(decoding: try JSONEncoder().encode(history), as: UTF8.self), forKey: "dayHistory")
+        let p = f.planner()
+        p.addTask(title: "Today", minutes: 25)
+        let saved = try f.savedHistory()
+        XCTAssertEqual(Set(saved.keys), ["2026-10-09", "2026-10-16"])
+    }
+
+    @MainActor func testOutOfRangeSettingsAreClampedOnLoad() async {
+        let f = Fixture()
+        f.defaults.set(0, forKey: "workMinutes")
+        f.defaults.set(500, forKey: "longBreakMinutes")
+        f.defaults.set(-3, forKey: "dayStartHour")
+        let p = f.planner()
+        XCTAssertEqual(p.workMinutes, 5)
+        XCTAssertEqual(p.longBreakMinutes, 60)
+        XCTAssertEqual(p.dayStartHour, 0)
+    }
+
+    @MainActor func testSkippingAnOwedBreakIsSaved() async {
+        let f = Fixture(), p = f.planner()
+        p.addTask(title: "Work", minutes: 50)
+        p.toggleRunPause()
+        f.advance(25); p.tick()
+        XCTAssertNotNil(f.defaults.object(forKey: "pendingBreakEarnedAt"))
+        p.startBlock(p.blocks.first { $0.kind == .work }!.id)
+        XCTAssertNil(f.defaults.object(forKey: "pendingBreakEarnedAt"))
+        XCTAssertFalse(f.planner().blocks.contains { $0.isBreak && $0.start < f.now.addingTimeInterval(60) })
+    }
+
     @MainActor func testOngoingMeetingShowsOnlyWhatIsLeftOfIt() async {
         let f = Fixture()
         f.addMeeting()
