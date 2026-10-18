@@ -66,8 +66,23 @@ SPM_CACHE_FLAGS=(
 # Universal binary so Intel Macs can run it too.
 ARCH_FLAGS=(--arch arm64 --arch x86_64)
 
+# Release builds also list every string the code looks up, so an untranslated
+# one stops the release. Kept in .build: only recompiled files are re-listed.
+L10N_FLAGS=()
+STRINGS_DATA="$PWD/.build/localized-strings"
+if [ "$RELEASE_BUILD" = 1 ]; then
+  mkdir -p "$STRINGS_DATA"
+  L10N_FLAGS=(-Xswiftc -emit-localized-strings -Xswiftc -emit-localized-strings-path -Xswiftc "$STRINGS_DATA")
+fi
+
 echo "==> swift build -c $CONFIG (arm64 + x86_64)"
-swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}"
+swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}" ${L10N_FLAGS[@]+"${L10N_FLAGS[@]}"}
+
+if [ "$RELEASE_BUILD" = 1 ]; then
+  echo "==> Checking translations"
+  /usr/bin/python3 Tools/check-localizations.py --stringsdata "$STRINGS_DATA" --sources Sources \
+    Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings
+fi
 
 BIN_PATH="$(swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}" --show-bin-path)/Pomodoro"
 
@@ -97,6 +112,11 @@ xcrun actool Resources/AppIcon.icon \
 /usr/libexec/PlistBuddy -c 'Add :CFBundleIconFile string AppIcon' "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Add :CFBundleIconName string AppIcon' "$APP/Contents/Info.plist"
 cp Resources/PrivacyInfo.xcprivacy "$APP/Contents/Resources/"
+
+# Translations: each catalog becomes a <language>.lproj folder in Resources.
+for catalog in Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings; do
+  xcrun xcstringstool compile "$catalog" --output-directory "$APP/Contents/Resources"
+done
 
 # --- Embed Sparkle -----------------------------------------------------------
 # SwiftPM links the XCFramework but does not bundle it. The framework has to be

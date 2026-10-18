@@ -94,6 +94,11 @@ pb "Add :CFBundleIconName string AppIcon"
 
 cp Resources/PrivacyInfo.xcprivacy "$APP/Contents/Resources/"
 
+# Translations: each catalog becomes a <language>.lproj folder in Resources.
+for catalog in Resources/Localizable.xcstrings Resources/InfoPlist.xcstrings; do
+  xcrun xcstringstool compile "$catalog" --output-directory "$APP/Contents/Resources"
+done
+
 # --- 3. Entitlements and provisioning profile ---------------------------------
 ENTITLEMENTS="$actool_out/app.entitlements"
 cp Resources/AppStore.entitlements "$ENTITLEMENTS"
