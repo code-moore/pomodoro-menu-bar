@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import CryptoKit
 import EventKit
 import PomodoroCore
 
@@ -121,7 +122,7 @@ final class CalendarService: PlannerCalendar {
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: included)
 
         return store.events(matching: predicate)
-            .filter { $0.status != .canceled && !Self.isDeclined($0) }
+            .filter { Self.isShown($0, dayStart: start, dayEnd: end) }
             .map { event in
                 // Calendar names often arrive with padding ("General ").
                 let calendarName = event.calendar?.title
@@ -129,12 +130,17 @@ final class CalendarService: PlannerCalendar {
                 let title = event.title?.trimmingCharacters(in: .whitespacesAndNewlines)
                 let notes = event.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
 
+                // Only today's part of an event counts.
+                let eventStart = max(event.startDate, start)
+                let eventEnd = min(event.endDate, end)
+                let banner = Self.isBanner(event, dayStart: start, dayEnd: end)
+
                 return Meeting(
                     id: Self.stableID(for: event),
                     title: (title?.isEmpty == false) ? title! : "Untitled event",
-                    start: event.startDate,
-                    end: event.endDate,
-                    isAllDay: event.isAllDay,
+                    start: banner ? start : eventStart,
+                    end: banner ? end : eventEnd,
+                    isAllDay: banner,
                     calendarName: (calendarName?.isEmpty == false) ? calendarName : nil,
                     notes: (notes?.isEmpty == false) ? notes : nil
                 )
@@ -142,10 +148,30 @@ final class CalendarService: PlannerCalendar {
             .sorted { $0.start < $1.start }
     }
 
+    /// Free time, like a declined invite, doesn't keep you busy. All-day
+    /// events stay whatever their availability: they never block work, only
+    /// show as banners, and Calendar marks new ones Free.
+    nonisolated static func isShown(_ event: EKEvent, dayStart: Date, dayEnd: Date) -> Bool {
+        isShown(canceled: event.status == .canceled, declined: isDeclined(event),
+                free: event.availability == .free, banner: isBanner(event, dayStart: dayStart, dayEnd: dayEnd))
+    }
+
+    /// The decision on its own: EventKit won't keep the availability of an
+    /// event that isn't saved, so a test can't build one marked Free.
+    nonisolated static func isShown(canceled: Bool, declined: Bool, free: Bool, banner: Bool) -> Bool {
+        !canceled && !declined && (banner || !free)
+    }
+
+    /// An all-day event, or one that spans the whole day, like a timed "Out of
+    /// office" over a weekend. Shown as a banner, never counted down.
+    nonisolated static func isBanner(_ event: EKEvent, dayStart: Date, dayEnd: Date) -> Bool {
+        event.isAllDay || (event.startDate <= dayStart && event.endDate >= dayEnd)
+    }
+
     /// True when the user turned the invite down. EventKit still returns those
     /// events, and counting them as busy pushed work back for meetings the user
     /// isn't going to.
-    private static func isDeclined(_ event: EKEvent) -> Bool {
+    private nonisolated static func isDeclined(_ event: EKEvent) -> Bool {
         event.attendees?.contains { $0.isCurrentUser && $0.participantStatus == .declined } ?? false
     }
 
@@ -154,13 +180,24 @@ final class CalendarService: PlannerCalendar {
     /// Falling back to `UUID()` gave the same event a different id on every
     /// refresh, so its timeline block was treated as brand new each time — the
     /// row flickered and any countdown running on it was cancelled. Deriving
-    /// the fallback from the event's own content keeps it stable.
-    private static func stableID(for event: EKEvent) -> String {
-        if let identifier = event.eventIdentifier, !identifier.isEmpty {
-            return identifier
+    /// the fallback from the event's own content keeps it stable. It's hashed,
+    /// because the id is saved while the event is counted down, and the
+    /// event's title must not be.
+    nonisolated static func stableID(for event: EKEvent) -> String {
+        let identifier = event.eventIdentifier.flatMap { $0.isEmpty ? nil : $0 }
+            ?? fallbackID(title: event.title, start: event.startDate, end: event.endDate,
+                          calendar: event.calendar?.calendarIdentifier)
+        // Every occurrence of a repeating event shares its identifier, and an
+        // overnight one appears twice in a day. The occurrence's original date
+        // tells them apart, and stays put if that occurrence is moved.
+        if event.hasRecurrenceRules || event.isDetached, let occurrence = event.occurrenceDate {
+            return "\(identifier)@\(Int(occurrence.timeIntervalSince1970))"
         }
-        let start = event.startDate?.timeIntervalSince1970 ?? 0
-        let end = event.endDate?.timeIntervalSince1970 ?? 0
-        return "\(event.title ?? "")|\(start)|\(end)|\(event.calendar?.calendarIdentifier ?? "")"
+        return identifier
+    }
+
+    nonisolated static func fallbackID(title: String?, start: Date?, end: Date?, calendar: String?) -> String {
+        let content = "\(title ?? "")|\(start?.timeIntervalSince1970 ?? 0)|\(end?.timeIntervalSince1970 ?? 0)|\(calendar ?? "")"
+        return SHA256.hash(data: Data(content.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 }

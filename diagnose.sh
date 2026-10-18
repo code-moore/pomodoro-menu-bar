@@ -7,6 +7,10 @@
 set -euo pipefail
 
 DOMAIN="${BUNDLE_ID:-com.codemoore.pomodoro.menubar}"
+# Read the website build's file by path. Once a sandboxed App Store build with
+# the same bundle ID has run, `defaults read <domain>` reads that build's
+# container instead. Set PREFS to the container's plist to inspect that build.
+PREFS="${PREFS:-$HOME/Library/Preferences/$DOMAIN}"
 
 echo "=== process ==="
 if pgrep -x Pomodoro >/dev/null; then
@@ -17,8 +21,8 @@ fi
 
 echo
 echo "=== updater (Sparkle) ==="
-defaults read "$DOMAIN" updaterDiagnostics 2>/dev/null | sed 's|^|  |' || echo "  (not recorded)"
+defaults read "$PREFS" updaterDiagnostics 2>/dev/null | sed 's|^|  |' || echo "  (not recorded)"
 
 echo
 echo "=== planner ==="
-defaults read "$DOMAIN" diagnostics 2>/dev/null || echo "  (not recorded)"
+defaults read "$PREFS" diagnostics 2>/dev/null || echo "  (not recorded)"

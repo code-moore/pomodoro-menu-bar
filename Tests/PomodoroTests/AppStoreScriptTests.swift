@@ -3,27 +3,16 @@ import XCTest
 final class AppStoreScriptTests: XCTestCase {
     /// Run only the team-ID preflight, without building or accessing signing credentials.
     private func preflight(teamID: String?) throws -> (status: Int32, output: String) {
-        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .deletingLastPathComponent().deletingLastPathComponent()
-        let source = try String(contentsOf: root.appendingPathComponent("build-appstore.sh"), encoding: .utf8)
+        let source = try ScriptTestSupport.source("build-appstore.sh")
         let start = try XCTUnwrap(source.range(of: "TEAM_ID=\"${TEAM_ID:-}\""))
         let end = try XCTUnwrap(source.range(of: "\nAPP_NAME=", range: start.upperBound..<source.endIndex))
         let script = String(source[start.lowerBound..<end.lowerBound])
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", "set -euo pipefail\n" + script + "\nprintf 'accepted:%s' \"$TEAM_ID\"\n"]
         var environment = ProcessInfo.processInfo.environment
         environment.removeValue(forKey: "TEAM_ID")
         if let teamID { environment["TEAM_ID"] = teamID }
-        process.environment = environment
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = output
-        try process.run()
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return (process.terminationStatus, String(decoding: data, as: UTF8.self))
+        return try ScriptTestSupport.snippet(script + "\nprintf 'accepted:%s' \"$TEAM_ID\"\n",
+                                             environment: environment)
     }
 
     func testMissingTeamIDFailsBeforeBuild() throws {

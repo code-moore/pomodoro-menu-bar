@@ -17,13 +17,18 @@ import subprocess
 import sys
 
 DOMAIN = os.environ.get("BUNDLE_ID", "com.codemoore.pomodoro.menubar")
+# By path, not domain: once a sandboxed App Store build with the same bundle ID
+# has run, `defaults export <domain>` reads that build's container instead.
+PREFS = os.environ.get(
+    "PREFS", os.path.expanduser(f"~/Library/Preferences/{DOMAIN}")
+)
 TODAY = datetime.date.today().isoformat()
 T1 = "11111111-1111-1111-1111-111111111111"
 T2 = "22222222-2222-2222-2222-222222222222"
 
 
 def prefs():
-    out = subprocess.run(["defaults", "export", DOMAIN, "-"], capture_output=True)
+    out = subprocess.run(["defaults", "export", PREFS, "-"], capture_output=True)
     return plistlib.loads(out.stdout) if out.stdout else {}
 
 

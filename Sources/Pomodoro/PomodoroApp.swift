@@ -52,6 +52,7 @@ struct PomodoroApp: App {
 struct DayPlanMenu: View {
     @ObservedObject var planner: DayPlanner
     @ObservedObject var updates: UpdateController
+    @StateObject private var loginItem = LoginItemController()
 
     @State private var newTitle = ""
     @State private var newHours = ""
@@ -76,6 +77,16 @@ struct DayPlanMenu: View {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 controls
+
+                if planner.historyLoadError != nil {
+                    // Rare, but silently showing an empty day would look like
+                    // the tasks were deleted.
+                    Label("Your saved tasks couldn't be read. A copy was kept so they can be recovered: see quietpomodoro.com/support.",
+                          systemImage: "exclamationmark.triangle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
                 // The footer's fold chevron has to stay reachable, so with the
                 // list folded away the footer moves up into this card.
@@ -264,7 +275,7 @@ struct DayPlanMenu: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .keyboardShortcut(.defaultAction)
-            .disabled(planner.blocks.isEmpty)
+            .disabled(!planner.canStartOrPause)
             .help(planner.isRunning ? "Pause" : "Start")
             .accessibilityLabel(planner.isRunning ? "Pause" : "Start")
 
@@ -333,6 +344,14 @@ struct DayPlanMenu: View {
         return TimelineRow.make(blocks: planner.blocks, expandedTaskID: expandedTaskID)
     }
 
+    /// A folded task opens on click, and its selected row folds it again.
+    private func disclosure(for row: TimelineRow, blockCounts: [UUID: Int]) -> BlockRow.Disclosure? {
+        if row.blockIDs.count > 1 { return .closed }
+        guard row.block.id == selectedBlockID, let taskID = row.block.taskID,
+              (blockCounts[taskID] ?? 0) > 1 else { return nil }
+        return .open
+    }
+
     private var timeline: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -349,6 +368,8 @@ struct DayPlanMenu: View {
                     let greyedRowIDs = Set(finishRowIndex.map {
                         rows[$0...].map(\.id)
                     } ?? [])
+                    let blockCounts = Dictionary(grouping: planner.blocks.compactMap(\.taskID),
+                                                 by: { $0 }).mapValues(\.count)
 
                     if planner.blocks.isEmpty {
                         Text(planner.tasks.isEmpty ? "No blocks yet. Add a task above."
@@ -377,13 +398,7 @@ struct DayPlanMenu: View {
                                 taskPriority: task?.priority ?? .leastUrgent,
                                 isSelected: selectedBlockID == block.id,
                                 displayMinutes: row.minutes,
-                                onStart: {
-                                    if block.id == planner.activeBlockID {
-                                        planner.toggleRunPause()
-                                    } else {
-                                        planner.startBlock(block.id)
-                                    }
-                                },
+                                disclosure: disclosure(for: row, blockCounts: blockCounts),
                                 onToggleDone: {
                                     guard let taskID = block.taskID else { return }
                                     tick(taskID)
@@ -697,6 +712,24 @@ struct DayPlanMenu: View {
 
     private var settingsPanel: some View {
         VStack(alignment: .leading, spacing: 9) {
+            settingsSwitch("Open at login", value: Binding(
+                get: { loginItem.isEnabled },
+                set: { loginItem.setEnabled($0) }
+            ))
+            if loginItem.needsApproval {
+                Text("Allow Pomodoro in Login Items to open it at login.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Open Login Items…") { loginItem.openSystemSettings() }
+                    .buttonStyle(TextLinkStyle())
+            }
+            if let error = loginItem.errorMessage {
+                Text(error)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             settingsSwitch("Show label in menu bar", value: $planner.showLabelInMenuBar)
             settingsSwitch("Auto-start next block", value: $planner.autoStartNext)
                 .help("Roll straight into the next block when one finishes")
@@ -745,6 +778,8 @@ struct DayPlanMenu: View {
         .tint(Theme.accent)
         .padding(16)
         .frame(width: 300)
+        // The login item can be changed in System Settings while we run.
+        .onAppear { loginItem.refresh() }
     }
 
     private func addTask() {
@@ -778,11 +813,14 @@ struct BlockRow: View {
     /// True when this row has been clicked, which reveals its buttons.
     let isSelected: Bool
     var displayMinutes: Int? = nil
-    let onStart: () -> Void
+    /// Set on a task that has breaks: whether they're folded into this row.
+    var disclosure: Disclosure? = nil
     let onToggleDone: () -> Void
     let onDeleteTask: () -> Void
     let onUpdateTask: (String, Int, TaskPriority) -> Void
     let onSelect: () -> Void
+
+    enum Disclosure { case closed, open }
 
     @State private var isEditing = false
     @State private var draftTitle = ""
@@ -914,10 +952,21 @@ struct BlockRow: View {
                 if block.isMeeting {
                     Color.clear
                 } else {
-                    Text(DayPlanMenu.durationText(displayMinutes ?? block.minutes))
-                        .font(.system(size: 12))
-                        .monospacedDigit()
-                        .foregroundStyle(block.isBreak ? Theme.breakText : Theme.secondaryText)
+                    HStack(spacing: 3) {
+                        Text(DayPlanMenu.durationText(displayMinutes ?? block.minutes))
+                            .font(.system(size: 12))
+                            .monospacedDigit()
+                            .foregroundStyle(block.isBreak ? Theme.breakText : Theme.secondaryText)
+                        // Breaks stay folded into their task until it's
+                        // clicked. The slot is kept on every row so the
+                        // durations still line up.
+                        Image(systemName: disclosure == .open ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Theme.secondaryText)
+                            .frame(width: 8)
+                            .opacity(disclosure == nil ? 0 : 1)
+                            .accessibilityHidden(true)
+                    }
                 }
             }
             .frame(width: 64, height: 14, alignment: .trailing)

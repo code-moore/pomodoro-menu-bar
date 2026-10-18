@@ -13,7 +13,7 @@ public enum DurationInput {
     /// One box's text in minutes, or nil if it isn't a number. Hours may be
     /// fractional ("1.5" or "1,5" is 90 minutes); minutes are whole.
     public static func minutes(in text: String, unit: Unit) -> Int? {
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         switch unit {
         case .minutes:
             guard let minutes = Int(trimmed), minutes >= 0 else { return nil }
@@ -40,6 +40,6 @@ public enum DurationInput {
     }
 
     public static func isBlank(_ text: String) -> Bool {
-        text.trimmingCharacters(in: .whitespaces).isEmpty
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }

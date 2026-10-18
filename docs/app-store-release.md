@@ -62,8 +62,9 @@ repository; never commit them.
 
 ## Before submitting, check by hand
 
-The store build is sandboxed and has a new bundle ID, so macOS treats it as a
-different app from the one you've been using:
+The store build is sandboxed. It shares its bundle ID with the website build,
+but keeps its data in its own container, so it starts empty and macOS asks
+for calendar access again:
 
 - Open `dist/AppStore/Pomodoro.app`, click **Connect**, allow calendar access,
   and check today's meetings appear. This is the one thing the sandbox could

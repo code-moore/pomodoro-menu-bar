@@ -18,6 +18,26 @@ APPCAST_URL="${APPCAST_URL:-$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' Reso
 # `open` will merely focus it rather than launching the new bundle — so a
 # rebuild would silently appear to do nothing. Quit first, relaunch after.
 WAS_RUNNING=0
+BUILD_OK=0
+MOVED_PREVIOUS=0
+ICON_TEMP=""
+# A build that fails after quitting the running app must not leave the user's
+# timer closed: put the previous bundle back and reopen it.
+cleanup() {
+  [ -z "$ICON_TEMP" ] || rm -rf "$ICON_TEMP"
+  [ "$BUILD_OK" = 1 ] && return
+  # Only a bundle this run set aside: one left by a killed run is older.
+  if [ "$MOVED_PREVIOUS" = 1 ] && [ -d "$APP.previous" ]; then
+    rm -rf "$APP"
+    mv "$APP.previous" "$APP"
+  fi
+  if [ "$WAS_RUNNING" = 1 ] && [ -d "$APP" ]; then
+    echo "==> Build failed; reopening the previous $APP" >&2
+    open "$APP" || true
+  fi
+}
+trap cleanup EXIT
+
 if [ "$APP" = "Pomodoro.app" ] && pgrep -x "$APP_NAME" >/dev/null 2>&1; then
   WAS_RUNNING=1
   echo "==> Quitting the running instance (it would otherwise stay stale)"
@@ -51,7 +71,12 @@ swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}"
 
 BIN_PATH="$(swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}" --show-bin-path)/Pomodoro"
 
-rm -rf "$APP"
+# Kept until the new bundle is signed and verified, so a failure can restore it.
+rm -rf "$APP.previous"
+if [ -e "$APP" ]; then
+  mv "$APP" "$APP.previous"
+  MOVED_PREVIOUS=1
+fi
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN_PATH" "$APP/Contents/MacOS/Pomodoro"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
@@ -64,7 +89,6 @@ fi
 
 # Reuse the icon and privacy manifest already used by the App Store build.
 ICON_TEMP="$(mktemp -d)"
-trap 'rm -rf "$ICON_TEMP"' EXIT
 xcrun actool Resources/AppIcon.icon \
   --compile "$APP/Contents/Resources" \
   --platform macosx --minimum-deployment-target 14.0 --app-icon AppIcon \
@@ -134,6 +158,8 @@ sign() {
   # one; the Sparkle pieces inside it keep their own.
   local entitlements=()
   [ -n "${2:-}" ] && entitlements=(--entitlements "$2")
+  # Optional third argument: an extra codesign flag.
+  [ -n "${3:-}" ] && entitlements+=("$3")
   # Timestamping needs Apple's server; fall back to a plain hardened signature
   # if it is unreachable (it is required for notarization, not for local use).
   if [ "$RELEASE_BUILD" = 1 ]; then
@@ -160,7 +186,12 @@ if [ -n "$SIGN_IDENTITY" ] && security find-identity -v -p codesigning 2>/dev/nu
   if [ -d "$V/XPCServices" ]; then
     for xpc in "$V"/XPCServices/*.xpc; do
       [ -e "$xpc" ] || continue
-      sign "$xpc"
+      if [ "$(basename "$xpc")" = Downloader.xpc ]; then
+        # Sparkle ships it with entitlements of its own; re-signing drops them.
+        sign "$xpc" "" --preserve-metadata=entitlements
+      else
+        sign "$xpc"
+      fi
     done
   fi
   [ -e "$V/Updater.app" ] && sign "$V/Updater.app"
@@ -182,6 +213,8 @@ fi
 echo "==> Verifying signature"
 codesign --verify --deep --strict "$APP"
 echo "    signature OK"
+BUILD_OK=1
+rm -rf "$APP.previous"
 
 echo "==> Built $APP"
 
