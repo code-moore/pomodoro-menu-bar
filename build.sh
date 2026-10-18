@@ -19,13 +19,15 @@ APPCAST_URL="${APPCAST_URL:-$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' Reso
 # rebuild would silently appear to do nothing. Quit first, relaunch after.
 WAS_RUNNING=0
 BUILD_OK=0
+MOVED_PREVIOUS=0
 ICON_TEMP=""
 # A build that fails after quitting the running app must not leave the user's
 # timer closed: put the previous bundle back and reopen it.
 cleanup() {
   [ -z "$ICON_TEMP" ] || rm -rf "$ICON_TEMP"
   [ "$BUILD_OK" = 1 ] && return
-  if [ -d "$APP.previous" ]; then
+  # Only a bundle this run set aside: one left by a killed run is older.
+  if [ "$MOVED_PREVIOUS" = 1 ] && [ -d "$APP.previous" ]; then
     rm -rf "$APP"
     mv "$APP.previous" "$APP"
   fi
@@ -71,7 +73,10 @@ BIN_PATH="$(swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" "${SPM_CACHE_FLAGS[@]}" 
 
 # Kept until the new bundle is signed and verified, so a failure can restore it.
 rm -rf "$APP.previous"
-[ ! -e "$APP" ] || mv "$APP" "$APP.previous"
+if [ -e "$APP" ]; then
+  mv "$APP" "$APP.previous"
+  MOVED_PREVIOUS=1
+fi
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN_PATH" "$APP/Contents/MacOS/Pomodoro"
 cp Resources/Info.plist "$APP/Contents/Info.plist"

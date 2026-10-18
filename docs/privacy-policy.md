@@ -25,9 +25,9 @@ tracking.
   are read on your Mac, used only to build your day's plan, and never sent
   anywhere. Their titles, notes and attendees are never saved. While you
   count a meeting down, the app keeps that event's identifier and end time,
-  so the countdown survives a restart. Events marked Free are left out. You can turn individual calendars off in
-  Settings, and withdraw access at any time in System Settings > Privacy &
-  Security > Calendars.
+  so the countdown survives a restart. Timed events marked Free are left
+  out. You can turn individual calendars off in Settings, and withdraw access
+  at any time in System Settings > Privacy & Security > Calendars.
 
 ## Update checks (website version only)
 

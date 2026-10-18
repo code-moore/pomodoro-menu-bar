@@ -237,7 +237,7 @@ final class DayPlanner: ObservableObject {
         currentDayKey = Self.dayKey(for: now())
         resumeOrRecoverOvernightWork()
         tasks = history[currentDayKey] ?? []
-        carryOverUnfinishedTasks()
+        let carried = carryOverUnfinishedTasks()
 
         // Today's pomodoro count and any break still owed. Yesterday's count
         // doesn't carry over.
@@ -257,9 +257,11 @@ final class DayPlanner: ObservableObject {
         // Meeting blocks don't exist until the deferred EventKit read. Keep
         // their saved state intact until that read can validate the event.
         // A countdown left over from an earlier day doesn't come back with its
-        // carried-over task, just as it would have stopped at midnight.
+        // carried-over task, just as it would have stopped at midnight. Older
+        // saves have no day, but one made today can't be on a carried task.
         let savedDay = defaults.string(forKey: Key.activeDay)
-        if let id = defaults.string(forKey: Key.activeBlock), savedDay == nil || savedDay == currentDayKey {
+        if let id = defaults.string(forKey: Key.activeBlock),
+           savedDay == currentDayKey || (savedDay == nil && !carried) {
             let saved = SavedCountdown(id: id, running: defaults.bool(forKey: Key.isRunning),
                 end: defaults.object(forKey: Key.endDate) as? Date,
                 remaining: defaults.double(forKey: Key.remaining),
@@ -1050,17 +1052,21 @@ final class DayPlanner: ObservableObject {
 
     /// Tasks not finished on the last day the app was used move on to today,
     /// with the work already done on them. Finished ones stay with their day.
-    /// Only into an empty day, so it happens once, at the turn of the day or
-    /// on the first launch of a new one.
-    private func carryOverUnfinishedTasks() {
-        guard tasks.isEmpty,
+    /// Only into a day not seen before, so it happens once, at the turn of the
+    /// day or on the first launch of a new one. A day emptied with Clear all
+    /// has been seen, and stays empty: checking for no tasks instead reached
+    /// one day further back on every relaunch.
+    @discardableResult
+    private func carryOverUnfinishedTasks() -> Bool {
+        guard history[currentDayKey] == nil,
               let previous = history.keys.filter({ $0 < currentDayKey }).max(),
-              let earlier = history[previous] else { return }
+              let earlier = history[previous] else { return false }
         let unfinished = earlier.filter { !$0.isDone }
-        guard !unfinished.isEmpty else { return }
+        guard !unfinished.isEmpty else { return false }
         history[previous] = earlier.filter(\.isDone)
         tasks = unfinished
         persistToday()
+        return true
     }
 
     // MARK: - Persistence

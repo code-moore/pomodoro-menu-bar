@@ -52,14 +52,16 @@ final class ReleaseScriptTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        for (built, expected) in [("0", "old"), ("1", "new")] {
+        // A bundle left behind by a killed run must not replace a good one
+        // when this run fails before setting the current one aside.
+        for (built, moved, expected) in [("0", "1", "old"), ("1", "1", "new"), ("0", "0", "new")] {
             let setup = """
                 cd '\(directory.path)'
                 rm -rf Pomodoro.app Pomodoro.app.previous
                 mkdir -p Pomodoro.app.previous Pomodoro.app
                 echo old > Pomodoro.app.previous/marker
                 echo new > Pomodoro.app/marker
-                APP=Pomodoro.app WAS_RUNNING=1 BUILD_OK=\(built) ICON_TEMP=""
+                APP=Pomodoro.app WAS_RUNNING=1 BUILD_OK=\(built) MOVED_PREVIOUS=\(moved) ICON_TEMP=""
                 open() { echo "opened $1"; }
 
                 """

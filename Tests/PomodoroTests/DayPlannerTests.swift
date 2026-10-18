@@ -176,21 +176,25 @@ final class DayPlannerTests: XCTestCase {
     }
 
     @MainActor func testOvernightRecoveryDoesNotCreditPausedWork() async throws {
-        let f = Fixture()
-        f.advance(11 * 60 + 30)
-        let p = f.planner()
-        p.addTask(title: "Paused yesterday", minutes: 25)
-        p.toggleRunPause()
-        f.advance(5); p.pause()
-        f.advance(35)
+        // Older versions didn't save the countdown's day.
+        for olderSave in [false, true] {
+            let f = Fixture()
+            f.advance(11 * 60 + 30)
+            let p = f.planner()
+            p.addTask(title: "Paused yesterday", minutes: 25)
+            p.toggleRunPause()
+            f.advance(5); p.pause()
+            if olderSave { f.defaults.removeObject(forKey: "activeDay") }
+            f.advance(35)
 
-        let recovered = f.planner()
-        let carried = try XCTUnwrap(f.savedHistory()["2026-10-17"]?.first)
-        XCTAssertEqual(carried.title, "Paused yesterday")
-        XCTAssertEqual(carried.completedMinutes, 0)
-        XCTAssertFalse(carried.isDone)
-        XCTAssertEqual(recovered.tasks, [carried])
-        XCTAssertNil(recovered.activeBlockID)
+            let recovered = f.planner()
+            let carried = try XCTUnwrap(f.savedHistory()["2026-10-17"]?.first)
+            XCTAssertEqual(carried.title, "Paused yesterday")
+            XCTAssertEqual(carried.completedMinutes, 0)
+            XCTAssertFalse(carried.isDone)
+            XCTAssertEqual(recovered.tasks, [carried])
+            XCTAssertNil(recovered.activeBlockID, "olderSave: \(olderSave)")
+        }
     }
 
     @MainActor func testUnfinishedTasksCarryOverAndFinishedOnesStay() async throws {
@@ -213,6 +217,24 @@ final class DayPlannerTests: XCTestCase {
             XCTAssertEqual(try f.savedHistory()["2026-10-17"]?.map(\.title), ["Half done", "Not started"])
             XCTAssertEqual(f.planner().tasks.count, 2, "Carried once, not again on the next launch")
         }
+    }
+
+    @MainActor func testClearedDayDoesNotBringBackOlderUnfinishedTasks() async throws {
+        let f = Fixture()
+        // Versions before carry-over left unfinished tasks on every past day.
+        let history = ["2026-10-13": [DayTask(title: "A")], "2026-10-14": [DayTask(title: "B")],
+                       "2026-10-15": [DayTask(title: "C")]]
+        f.defaults.set(String(decoding: try JSONEncoder().encode(history), as: UTF8.self), forKey: "dayHistory")
+        let p = f.planner()
+        XCTAssertEqual(p.tasks.map(\.title), ["C"], "Only the last day used carries over")
+        p.clearAll()
+        XCTAssertEqual(f.planner().tasks, [], "Cleared stays cleared on a relaunch")
+
+        f.advance(24 * 60)
+        let tomorrow = f.planner()
+        XCTAssertEqual(tomorrow.tasks, [], "Nothing older than the last day used comes back")
+        tomorrow.deleteTask(id: tomorrow.addTask(title: "D", minutes: 25)!)
+        XCTAssertEqual(f.planner().tasks, [])
     }
 
     @MainActor func testRelaunchMidBlockAfterMidnightFinishesItInItsOwnDay() async throws {
@@ -285,9 +307,8 @@ final class DayPlannerTests: XCTestCase {
         f.calendar.isAuthorized = true
         let p = f.planner()
         p.refreshCalendar(force: true)
-        let first = p.addTask(title: "A", minutes: 25)
-        p.addTask(title: "B", minutes: 25)
-        f.advance(26); p.minuteTick()
+        let first = p.addTask(title: "A", minutes: 1)
+        f.advance(2); p.minuteTick()
         XCTAssertEqual(p.displayBlock?.taskID, first)
         XCTAssertEqual(p.displayBlock?.start, f.now)
     }
