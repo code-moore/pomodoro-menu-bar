@@ -419,7 +419,7 @@ final class DayPlanner: ObservableObject {
             return Self.fit(meeting.title, to: Self.maxMenuBarLabelLength)
         }
         guard let block = displayBlock else {
-            return String(localized: "Plan your day", comment: "Menu bar label when nothing is planned. Keep it under about 16 characters.")
+            return String(localized: "Plan your day", comment: "Menu bar label when nothing is planned. It shows alone, without a countdown, so keep it under about 20 characters: no wider than a 16-character task name plus its countdown.")
         }
         if block.isBreak { return block.title }
         if let taskID = block.taskID, let task = tasks.first(where: { $0.id == taskID }) {

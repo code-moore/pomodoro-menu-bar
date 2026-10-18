@@ -2588,7 +2588,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "小时（0-23）"
+            "value": "时（0-23）"
           }
         }
       }
@@ -3524,7 +3524,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分钟"
+            "value": "分"
           }
         }
       }
@@ -4064,7 +4064,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ora"
+            "value": "In corso"
           }
         },
         "ja": {
@@ -4136,7 +4136,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "ora"
+            "value": "in corso"
           }
         },
         "ja": {
@@ -4466,7 +4466,7 @@
       }
     },
     "Plan your day": {
-      "comment": "Menu bar label when nothing is planned. Keep it under about 16 characters.",
+      "comment": "Menu bar label when nothing is planned. It shows alone, without a countdown, so keep it under about 20 characters: no wider than a 16-character task name plus its countdown.",
       "extractionState": "manual",
       "localizations": {
         "de": {
@@ -4628,7 +4628,7 @@
         "fil": {
           "stringUnit": {
             "state": "translated",
-            "value": "Umalis"
+            "value": "Lumabas"
           }
         },
         "fr": {
@@ -5036,7 +5036,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "短暂休息（分钟）"
+            "value": "短休息（分钟）"
           }
         }
       }
@@ -5654,7 +5654,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "緊急"
+            "value": "緊急度：高"
           }
         },
         "ko": {
@@ -5762,73 +5762,73 @@
       }
     },
     "Your saved tasks couldn't be read. A copy was kept so they can be recovered: see quietpomodoro.com/mac/support.": {
-      "comment": "Rare warning at the top of the panel. Keep the web address exactly as is.",
+      "comment": "Rare warning at the top of the panel. Keep the web address, with this language's folder added, e.g. quietpomodoro.com/de/mac/support for German.",
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Deine gespeicherten Aufgaben konnten nicht gelesen werden. Eine Kopie wurde aufbewahrt, damit sie wiederhergestellt werden können: siehe quietpomodoro.com/mac/support."
+            "value": "Deine gespeicherten Aufgaben konnten nicht gelesen werden. Eine Kopie wurde aufbewahrt, damit sie wiederhergestellt werden können: siehe quietpomodoro.com/de/mac/support."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se han podido leer tus tareas guardadas. Se ha guardado una copia para poder recuperarlas: consulta quietpomodoro.com/mac/support."
+            "value": "No se han podido leer tus tareas guardadas. Se ha guardado una copia para poder recuperarlas: consulta quietpomodoro.com/es/mac/support."
           }
         },
         "fil": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hindi mabasa ang iyong mga naka-save na gawain. May itinabing kopya para maibalik ang mga ito: tingnan ang quietpomodoro.com/mac/support."
+            "value": "Hindi mabasa ang iyong mga naka-save na gawain. May itinabing kopya para maibalik ang mga ito: tingnan ang quietpomodoro.com/fil/mac/support."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossible de lire vos tâches enregistrées. Une copie a été conservée pour pouvoir les récupérer : consultez quietpomodoro.com/mac/support."
+            "value": "Impossible de lire vos tâches enregistrées. Une copie a été conservée pour pouvoir les récupérer : consultez quietpomodoro.com/fr/mac/support."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile leggere le attività salvate. È stata conservata una copia per poterle recuperare: consulta quietpomodoro.com/mac/support."
+            "value": "Impossibile leggere le attività salvate. È stata conservata una copia per poterle recuperare: consulta quietpomodoro.com/it/mac/support."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存したタスクを読み込めませんでした。復元できるようにコピーを残してあります。詳しくは quietpomodoro.com/mac/support をご覧ください。"
+            "value": "保存したタスクを読み込めませんでした。復元できるようにコピーを残してあります。詳しくは quietpomodoro.com/ja/mac/support をご覧ください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "저장된 작업을 읽을 수 없습니다. 복구할 수 있도록 사본을 보관해 두었습니다. quietpomodoro.com/mac/support를 참조하세요."
+            "value": "저장된 작업을 읽을 수 없습니다. 복구할 수 있도록 사본을 보관해 두었습니다. quietpomodoro.com/ko/mac/support를 참조하세요."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Je bewaarde taken konden niet worden gelezen. Er is een kopie bewaard zodat ze kunnen worden hersteld: zie quietpomodoro.com/mac/support."
+            "value": "Je bewaarde taken konden niet worden gelezen. Er is een kopie bewaard zodat ze kunnen worden hersteld: zie quietpomodoro.com/nl/mac/support."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível ler suas tarefas salvas. Uma cópia foi mantida para que possam ser recuperadas: consulte quietpomodoro.com/mac/support."
+            "value": "Não foi possível ler suas tarefas salvas. Uma cópia foi mantida para que possam ser recuperadas: consulte quietpomodoro.com/pt-br/mac/support."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dina sparade uppgifter kunde inte läsas. En kopia har sparats så att de kan återställas: se quietpomodoro.com/mac/support."
+            "value": "Dina sparade uppgifter kunde inte läsas. En kopia har sparats så att de kan återställas: se quietpomodoro.com/sv/mac/support."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法读取你存储的任务。已保留一份副本以便恢复：请参阅 quietpomodoro.com/mac/support。"
+            "value": "无法读取你存储的任务。已保留一份副本以便恢复：请参阅 quietpomodoro.com/zh-hans/mac/support。"
           }
         }
       }

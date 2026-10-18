@@ -717,8 +717,9 @@ struct DayPlanMenu: View {
             .frame(height: 1)
             .padding(.vertical, 8)
             .padding(.horizontal, -18)
-            .accessibilityLabel("Finish \(time.formatted(date: .omitted, time: .shortened))")
-            .help("Finish \(time.formatted(date: .omitted, time: .shortened))")
+            // The same 24-hour time as the plan's rows beside it.
+            .accessibilityLabel("Finish \(BlockRow.time(time))")
+            .help("Finish \(BlockRow.time(time))")
     }
 
     private var settingsPanel: some View {
@@ -855,8 +856,10 @@ struct BlockRow: View {
         if allDay {
             return String(localized: "All day", comment: "Time column of an all-day event. 78pt at 12pt: about 11 Latin characters at most.")
         }
-        return "\(timeFormatter.string(from: start))–\(timeFormatter.string(from: end))"
+        return "\(time(start))–\(time(end))"
     }
+
+    static func time(_ date: Date) -> String { timeFormatter.string(from: date) }
 
     var body: some View {
         if isEditing {
