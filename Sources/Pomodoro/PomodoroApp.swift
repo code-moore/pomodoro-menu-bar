@@ -871,11 +871,17 @@ struct BlockRow: View {
 
     private var row: some View {
         HStack(spacing: 6) {
-            // Work rows tick off like a to-do. Breaks and meetings keep the
-            // column empty, so every row's times line up.
+            // Work rows tick off like a to-do. Meetings get the header's
+            // calendar icon and breaks keep the column empty, so every row's
+            // times line up.
             Group {
                 if block.kind == .work && canEditTask {
                     TaskCheckbox(isDone: taskIsDone, priority: taskPriority, action: onToggleDone)
+                } else if block.isMeeting {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.accent)
+                        .accessibilityHidden(true)
                 } else {
                     Color.clear
                 }
