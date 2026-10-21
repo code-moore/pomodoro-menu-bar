@@ -60,6 +60,73 @@ private final class Fixture {
 }
 
 final class DayPlannerTests: XCTestCase {
+    @MainActor func testReorderWithinPriorityBothDirectionsPersists() async throws {
+        let f = Fixture(), p = f.planner()
+        let a = try XCTUnwrap(p.addTask(title: "A", minutes: 25, priority: .urgent))
+        let other = try XCTUnwrap(p.addTask(title: "Other priority", minutes: 25, priority: .leastUrgent))
+        let b = try XCTUnwrap(p.addTask(title: "B", minutes: 25, priority: .urgent))
+        let c = try XCTUnwrap(p.addTask(title: "C", minutes: 25, priority: .urgent))
+        XCTAssertTrue(p.reorderTask(a, onto: c))
+        XCTAssertEqual(Scheduler.ordered(p.tasks).map(\.id), [b, c, a, other])
+        XCTAssertTrue(p.reorderTask(a, onto: b))
+        XCTAssertEqual(Scheduler.ordered(p.tasks).map(\.id), [a, b, c, other])
+        let restored = f.planner()
+        XCTAssertEqual(Scheduler.ordered(restored.tasks).map(\.id), [a, b, c, other])
+        XCTAssertEqual(restored.blocks.filter { $0.kind == .work }.map(\.taskID), [a, b, c, other])
+    }
+
+    @MainActor func testReorderRejectsDifferentPriorityDoneMissingAndSameTask() async throws {
+        let f = Fixture(), p = f.planner()
+        let a = try XCTUnwrap(p.addTask(title: "A", minutes: 25, priority: .urgent))
+        let b = try XCTUnwrap(p.addTask(title: "B", minutes: 25, priority: .leastUrgent))
+        let c = try XCTUnwrap(p.addTask(title: "C", minutes: 25, priority: .urgent))
+        p.toggleDone(id: c)
+        let before = p.tasks
+        XCTAssertFalse(p.reorderTask(a, onto: b))
+        XCTAssertFalse(p.reorderTask(a, onto: a))
+        XCTAssertFalse(p.reorderTask(a, onto: UUID()))
+        XCTAssertFalse(p.reorderTask(UUID(), onto: a))
+        XCTAssertFalse(p.reorderTask(a, onto: c))
+        XCTAssertFalse(p.reorderTask(c, onto: a))
+        XCTAssertEqual(p.tasks, before)
+    }
+
+    @MainActor func testReorderLeavesRunningTaskAndCountdownPinned() async throws {
+        let f = Fixture(), p = f.planner()
+        let a = try XCTUnwrap(p.addTask(title: "Current", minutes: 50))
+        let b = try XCTUnwrap(p.addTask(title: "B", minutes: 25))
+        let c = try XCTUnwrap(p.addTask(title: "C", minutes: 25))
+        p.toggleRunPause()
+        f.advance(4)
+        p.tick()
+        let activeID = p.activeBlockID, remaining = p.remaining
+        XCTAssertFalse(p.reorderTask(a, onto: b))
+        XCTAssertFalse(p.reorderTask(b, onto: a))
+        XCTAssertTrue(p.reorderTask(c, onto: b))
+        XCTAssertEqual(p.activeBlockID, activeID)
+        XCTAssertEqual(p.remaining, remaining)
+        XCTAssertTrue(p.isRunning)
+        XCTAssertEqual(Scheduler.ordered(p.tasks).map(\.id), [a, c, b])
+        XCTAssertEqual(p.blocks.first?.taskID, a)
+    }
+
+    @MainActor func testEndedMeetingsDisappearFromRowsAndCountAtEndTime() async {
+        let f = Fixture()
+        f.addMeeting()
+        let p = f.planner()
+        p.refreshCalendar(force: true)
+        p.addTask(title: "Keep this task", minutes: 25)
+        XCTAssertEqual(p.remainingMeetingCount, 1)
+        XCTAssertTrue(p.visibleBlocks.contains { $0.isMeeting })
+        f.advance(29)
+        XCTAssertEqual(p.remainingMeetingCount, 1)
+        f.advance(1)
+        XCTAssertEqual(p.remainingMeetingCount, 0)
+        XCTAssertFalse(p.visibleBlocks.contains { $0.isMeeting })
+        XCTAssertTrue(p.visibleBlocks.contains { $0.taskID != nil })
+        XCTAssertEqual(p.meetings.count, 1, "Calendar history is retained")
+    }
+
     @MainActor func testChangingDurationDoesNotCreditUnworkedMinutes() async {
         let f = Fixture(), p = f.planner()
         p.addTask(title: "Fifty minutes", minutes: 50)

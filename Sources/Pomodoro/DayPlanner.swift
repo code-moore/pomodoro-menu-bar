@@ -365,6 +365,17 @@ final class DayPlanner: ObservableObject {
         tasks.filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) < ($1.completedAt ?? .distantPast) }
     }
 
+    /// Keep ended events out of the visible plan without changing scheduling history.
+    var visibleBlocks: [ScheduledBlock] {
+        let date = now()
+        return blocks.filter { !$0.isMeeting || $0.end > date }
+    }
+
+    var remainingMeetingCount: Int {
+        let date = now()
+        return meetings.filter { !$0.isAllDay && $0.end > date }.count
+    }
+
     /// A meeting starting soon enough to take over the menu bar countdown.
     var imminentMeeting: Meeting? {
         let now = self.now()
@@ -462,6 +473,27 @@ final class DayPlanner: ObservableObject {
         blocks.first { $0.taskID == taskID }?.id
     }
 
+    func canReorderTask(_ sourceID: UUID, onto targetID: UUID) -> Bool {
+        guard sourceID != targetID, sourceID != activeTaskID, targetID != activeTaskID,
+              let source = tasks.first(where: { $0.id == sourceID }),
+              let target = tasks.first(where: { $0.id == targetID }) else { return false }
+        return !source.isDone && !target.isDone && source.priority == target.priority
+    }
+
+    /// Move a whole task within its priority group; the current countdown stays pinned.
+    @discardableResult
+    func reorderTask(_ sourceID: UUID, onto targetID: UUID) -> Bool {
+        guard canReorderTask(sourceID, onto: targetID),
+              let source = tasks.firstIndex(where: { $0.id == sourceID }),
+              let target = tasks.firstIndex(where: { $0.id == targetID }) else { return false }
+        let moved = tasks.remove(at: source)
+        tasks.insert(moved, at: target)
+        persistToday()
+        reschedule()
+        persistState()
+        return true
+    }
+
     func updateTask(
         id: DayTask.ID,
         title: String,
@@ -527,7 +559,7 @@ final class DayPlanner: ObservableObject {
     }
 
     /// The task whose work block is being counted down, running or paused.
-    private var activeTaskID: DayTask.ID? {
+    var activeTaskID: DayTask.ID? {
         activeBlockID.flatMap(Scheduler.taskID(forWorkBlock:))
     }
 

@@ -67,6 +67,7 @@ struct DayPlanMenu: View {
     @State private var pendingScrollID: ScheduledBlock.ID?
     /// The row the user clicked, which shows its Delete button.
     @State private var selectedBlockID: ScheduledBlock.ID?
+    @State private var draggedTaskID: UUID?
     /// Gates the destructive "clear everything" action.
     @State private var pendingClearAll = false
     /// When a task was last ticked or unticked. Ticking one off moves the
@@ -179,7 +180,7 @@ struct DayPlanMenu: View {
 
     private var summary: String {
         guard !planner.tasks.isEmpty else {
-            return String(localized: "nothing planned", comment: "Panel header when there are no tasks. Lower case, short.")
+            return ""
         }
         let remaining = Self.durationText(planner.plannedMinutesRemaining)
         return String(localized: "\(planner.completedCount)/\(planner.tasks.count) done · \(remaining) of work left",
@@ -349,7 +350,7 @@ struct DayPlanMenu: View {
 
     private var timelineRows: [TimelineRow] {
         let expandedTaskID = planner.blocks.first { $0.id == selectedBlockID }?.taskID
-        return TimelineRow.make(blocks: planner.blocks, expandedTaskID: expandedTaskID)
+        return TimelineRow.make(blocks: planner.visibleBlocks, expandedTaskID: expandedTaskID)
     }
 
     /// A folded task opens on click, and its selected row folds it again.
@@ -428,12 +429,13 @@ struct DayPlanMenu: View {
                                     selectedBlockID = nil
                                 },
                                 onSelect: {
-                                    // Only task rows are selectable; calendar
-                                    // events have nothing to reveal.
-                                    guard block.taskID != nil else { return }
+                                    guard block.taskID != nil || block.isMeeting else { return }
                                     selectedBlockID = (selectedBlockID == block.id) ? nil : block.id
                                 }
                             )
+                            .modifier(TaskReorderModifier(planner: planner,
+                                taskID: block.kind == .work ? block.taskID : nil,
+                                draggedTaskID: $draggedTaskID))
                             .saturation(greyedRowIDs.contains(row.id) ? 0 : 1)
                             .opacity(greyedRowIDs.contains(row.id) ? 0.6 : 1)
                             .id(block.id)
@@ -594,7 +596,7 @@ struct DayPlanMenu: View {
     }
 
     private var meetingSummary: String {
-        let count = planner.meetings.filter { !$0.isAllDay }.count
+        let count = planner.remainingMeetingCount
         return count == 0
             ? String(localized: "No meetings today", comment: "Panel header, next to a calendar icon.")
             : String(localized: "\(count) meetings today", comment: "Panel header, next to a calendar icon. Number of timed meetings today.")
@@ -870,7 +872,7 @@ struct BlockRow: View {
     }
 
     private var row: some View {
-        HStack(spacing: 6) {
+        HStack(alignment: block.isMeeting && isSelected ? .top : .center, spacing: 6) {
             // Work rows tick off like a to-do. Meetings get the header's
             // calendar icon and breaks keep the column empty, so every row's
             // times line up.
@@ -930,23 +932,22 @@ struct BlockRow: View {
                         // Task titles use the same grey as their duration.
                         .foregroundStyle(block.isBreak ? Theme.breakText : (block.kind == .work || isDim) ? Theme.secondaryText : Theme.text)
 
-                    // Meetings carry the calendar they came from, in brackets.
-                    if block.isMeeting, let name = block.calendarName, !name.isEmpty {
-                        Text(verbatim: "(\(name))")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.secondaryText)
-                            .lineLimit(1)
-                    }
                 }
 
-                // The event's description, on its own line under the title.
-                if block.isMeeting, let notes = block.notes, !notes.isEmpty {
-                    Text(notes.replacingOccurrences(of: "\n", with: "  "))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.secondaryText)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .help(notes)
+                if block.isMeeting && isSelected {
+                    if let name = block.calendarName, !name.isEmpty {
+                        Text(verbatim: name)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let notes = block.notes, !notes.isEmpty {
+                        Text(verbatim: notes)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
                 }
             }
 
@@ -972,7 +973,13 @@ struct BlockRow: View {
             // Keep durations in the existing right-aligned column.
             Group {
                 if block.isMeeting {
-                    Color.clear
+                    Button(action: onSelect) {
+                        Image(systemName: isSelected ? "chevron.up" : "chevron.down")
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isSelected
+                        ? String(localized: "Hide meeting details")
+                        : String(localized: "Show meeting details"))
                 } else {
                     HStack(spacing: 3) {
                         Text(DayPlanMenu.durationText(displayMinutes ?? block.minutes))
@@ -1002,7 +1009,7 @@ struct BlockRow: View {
             // means "this row is clickable".
             switch phase {
             case .active:
-                if canEditTask { NSCursor.pointingHand.set() }
+                if canEditTask || block.isMeeting { NSCursor.pointingHand.set() }
             case .ended:
                 NSCursor.arrow.set()
             }
