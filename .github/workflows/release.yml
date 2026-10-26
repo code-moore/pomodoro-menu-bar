@@ -70,6 +70,9 @@ jobs:
         with:
           name: Pomodoro-release
           path: releases
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.23.1'
       - name: Publish source, organisation and website downloads
         env:
           GH_SOURCE_TOKEN: ${{ github.token }}

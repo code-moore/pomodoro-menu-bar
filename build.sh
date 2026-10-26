@@ -92,6 +92,10 @@ if [ -n "${BUILD_NUMBER:-}" ]; then
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$APP/Contents/Info.plist"
 fi
 
+if [ -n "${GITHUB_SHA:-}" ]; then
+  /usr/libexec/PlistBuddy -c "Add :PomodoroSourceRevision string $GITHUB_SHA" "$APP/Contents/Info.plist"
+fi
+
 # Reuse the icon and privacy manifest already used by the App Store build.
 ICON_TEMP="$(mktemp -d)"
 xcrun actool Resources/AppIcon.icon \
