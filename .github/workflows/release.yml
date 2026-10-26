@@ -1,0 +1,78 @@
+name: Build and publish Pomodoro for Mac
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - run: swift test --disable-sandbox
+      - run: python3 -m unittest discover -s Tests -p 'test_*.py'
+  build:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      NOTARY_PROFILE: pomodoro-ci
+      SIGN_IDENTITY: 'Developer ID Application: michael moore (5HX53BD53W)'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Import release credentials
+        env:
+          CERT: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          NOTARY_PRIVATE_KEY: ${{ secrets.NOTARY_PRIVATE_KEY }}
+          SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: bash Tools/ci-import-signing.sh
+      - run: swift package resolve
+      - name: Build signed and notarized release
+        run: |
+          VERSION="1.7.${GITHUB_RUN_NUMBER}"
+          export BUILD_NUMBER="$(date -u +%Y%m%d%H%M%S)"
+          mkdir -p releases
+          curl --fail --retry 3 https://quietpomodoro.com/downloads/mac/appcast.xml -o releases/appcast.xml
+          ./release.sh "$VERSION"
+          test -f "releases/Pomodoro-$VERSION.dmg"
+          printf '%s\n' "$VERSION" > releases/version.txt
+          printf '%s\n' "$GITHUB_SHA" > releases/source-commit.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Pomodoro-release
+          path: releases/
+          if-no-files-found: error
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          rm -f sparkle_private_key.txt "$RUNNER_TEMP/certificate.p12" "$RUNNER_TEMP/notary-key.p8"
+          security delete-keychain "$RUNNER_TEMP/pomodoro-signing.keychain-db" || true
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: pomodoro-release-publishing
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: Pomodoro-release
+          path: releases
+      - name: Publish source, organisation and website downloads
+        env:
+          GH_SOURCE_TOKEN: ${{ github.token }}
+          GH_RELEASE_TOKEN: ${{ secrets.CODE_MOORE_RELEASE_TOKEN }}
+          GH_WEBSITE_TOKEN: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
+        run: bash Tools/ci-publish.sh
