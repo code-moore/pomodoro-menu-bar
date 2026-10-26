@@ -119,3 +119,5 @@ The GitHub workflow tests each pull request. Every main push builds a new `1.7.<
 The same verified DMG and signed appcast are committed to `msmfa/quiet-pomodoro` on master, updating `MAC_VERSION`. Its existing Cloudflare deployment makes the website download buttons and installed-app feed current. A stale source build never replaces the website. Published archives are immutable.
 
 Required source repository secrets: `DEVELOPER_ID_P12_BASE64`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_PRIVATE_KEY`, and the original `SPARKLE_PRIVATE_KEY`. Publishing uses `CODE_MOORE_RELEASE_TOKEN` (Contents read/write only in `code-moore/pomodoro-menu-bar`) and `WEBSITE_RELEASE_TOKEN` (Contents read/write only in `msmfa/quiet-pomodoro`). Keep these encrypted in GitHub, and renew expiring credentials before expiry.
+
+The configured organisation publishing credential expires on 27 October 2027. The website publishing credential expires on 24 January 2027 and must be renewed before then. Apple credentials are already configured; the original Sparkle update-signing key must be supplied before the first automated release.
