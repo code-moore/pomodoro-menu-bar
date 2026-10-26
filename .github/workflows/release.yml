@@ -37,7 +37,8 @@ jobs:
       - name: Build signed and notarized release
         run: |
           VERSION="1.7.${GITHUB_RUN_NUMBER}"
-          export BUILD_NUMBER="$(date -u +%Y%m%d%H%M%S)"
+          BUILD_NUMBER="$(date -u +%Y%m%d%H%M%S)"
+          export BUILD_NUMBER
           mkdir -p releases
           curl --fail --retry 3 https://quietpomodoro.com/downloads/mac/appcast.xml -o releases/appcast.xml
           ./release.sh "$VERSION"
