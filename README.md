@@ -1,15 +1,35 @@
-# Pomodoro
+# QPT
 
-A macOS menu bar planner that turns your to-do list into focus blocks and
-breaks, fitted around your meetings.
+Plan your day from your Mac menu bar
 
-![Pomodoro's day plan in dark mode](docs/screenshots/1-plan-your-day-dark.png)
+<img src="docs/screenshots/banner.png" width="100%" alt="Pomodoro's menu bar panel open over a Mac calendar, with a 25:00 timer and five tasks fitted around a standup, lunch and a town hall.">
 
-- Add a task and how long it should take. Pomodoro splits it into focus blocks
-  with breaks between them.
-- Today's events from the calendars on your Mac are already in the plan.
-- The time left on the current block stays in the menu bar.
-- No account and no tracking. See the [privacy policy](docs/privacy-policy.md).
+## How it works
+
+1. **Add all your tasks for the day.**
+2. **Add a priority to each task with one click.**
+3. **We work out the intervals.**
+4. **We fit our timings around your schedule.**
+5. **Keep your timer close.**
+
+## Features
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Tick tasks off like a to-do list. Finish early and the next task starts straight away.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Priority labels that automatically rearrange your tasks into the most urgent first.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Integrated with Mac calendars with one click.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Set your own block and break lengths and when your day starts.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Built for macOS, in Light and Dark mode.
+
+## Privacy
+
+No account, no analytics, no advertising and no tracking. Your tasks and
+settings stay on your Mac. Calendar access is optional, and your events are read
+on your Mac and never sent anywhere. See the
+[privacy policy](docs/privacy-policy.md).
 
 ## Download
 
@@ -51,7 +71,7 @@ If you change text the user sees, run `Tools/sync-localizations.sh` and translat
 the new strings. The [release guide](docs/website-release.md#translations) has
 the details.
 
-By submitting a contribution, you agree that Michael Moore can use it under any
+By submitting a contribution, you agree that CODE MOORE LTD can use it under any
 license, including in the official app.
 
 Report security problems privately, as described in [SECURITY.md](SECURITY.md).

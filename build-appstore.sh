@@ -25,7 +25,7 @@ if [[ ! "$TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
   exit 1
 fi
 APP_NAME="Pomodoro"
-COPYRIGHT="${COPYRIGHT:-© 2026 Michael Moore}"
+COPYRIGHT="${COPYRIGHT:-© 2026 CODE MOORE LTD}"
 VERSION="${VERSION:-$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)}"
 # Must go up with every upload of the same version. Date then time keeps it
 # rising, and keeps each part well inside the 32-bit range App Store Connect
