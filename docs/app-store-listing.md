@@ -43,5 +43,5 @@ pomodoro,focus,timer,planner,menu bar,time blocking,calendar,tasks,schedule,prod
 - **Age rating:** answer "None" to every question → 4+
 - **Support URL:** required; any page with a way to contact you (e.g. a support page or mailto link on the Quiet Pomodoro site)
 - **Marketing URL:** optional
-- **Copyright:** © 2026 Michael Moore
+- **Copyright:** © 2026 CODE MOORE LTD
 - **Privacy policy URL:** see `privacy-policy.md`
