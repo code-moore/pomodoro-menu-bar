@@ -22,6 +22,11 @@ Built from $GITHUB_SHA. Automated tests passed. Signed with Developer ID and not
 
 Installed apps continue checking the signed update feed at quietpomodoro.com.
 NOTES
+# Tags decide what ships, so the current release is the highest version tag.
+newest_tag() {
+  GH_TOKEN="$GH_SOURCE_TOKEN" gh api "repos/$SOURCE/git/matching-refs/tags/v" --paginate --jq '.[].ref' |
+    sed 's#^refs/tags/##' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1
+}
 for repo in "$SOURCE" "$TARGET"; do
   export GH_TOKEN="$GH_SOURCE_TOKEN"
   asset="$DMG"
@@ -31,7 +36,6 @@ for repo in "$SOURCE" "$TARGET"; do
     asset=Pomodoro-macos.dmg
     target=main
   fi
-  test "$(gh api "repos/$repo" --jq .private)" = true
   (cd releases && sha256sum "$asset" > SHA256SUMS.txt)
   if gh release view "$TAG" -R "$repo" --json isDraft > releases/state.json 2>/dev/null; then
     if [ "$(python3 -c 'import json;print(json.load(open("releases/state.json"))["isDraft"])')" = False ]; then
@@ -46,12 +50,12 @@ for repo in "$SOURCE" "$TARGET"; do
   fi
   gh release upload "$TAG" -R "$repo" "releases/$asset" releases/SHA256SUMS.txt releases/appcast.xml releases/source-commit.txt --clobber
   latest=false
-  if [ "$(GH_TOKEN="$GH_SOURCE_TOKEN" gh api "repos/$SOURCE/commits/main" --jq .sha)" = "$GITHUB_SHA" ]; then latest=true; fi
+  if [ "$(newest_tag)" = "$TAG" ]; then latest=true; fi
   gh release edit "$TAG" -R "$repo" --draft=false --latest="$latest"
 done
 # An old build can remain downloadable, but must not replace the live website.
-if [ "$(GH_TOKEN="$GH_SOURCE_TOKEN" gh api "repos/$SOURCE/commits/main" --jq .sha)" != "$GITHUB_SHA" ]; then
-  echo 'A newer main commit exists; leaving the website unchanged.'
+if [ "$(newest_tag)" != "$TAG" ]; then
+  echo 'A newer release tag exists; leaving the website unchanged.'
   exit 0
 fi
 export GH_TOKEN="$GH_WEBSITE_TOKEN"
