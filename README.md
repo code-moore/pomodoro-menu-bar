@@ -1,37 +1,28 @@
-# Pomodoro
+# QPT
 
-A pomodoro timer for your Mac menu bar.
+Plan your day from your Mac menu bar
 
-Pomodoro lives in your Mac's menu bar and turns your to-do list into focus
-blocks and breaks, fitted around your meetings.
-
-<img src="docs/screenshots/mac-panel.svg" width="480" alt="Pomodoro's full menu bar panel with six sample tasks, priority markers and two calendar meetings fitted into the schedule.">
+<img src="docs/screenshots/banner.png" width="100%" alt="Pomodoro's menu bar panel open over a Mac calendar, with a 25:00 timer and five tasks fitted around a standup, lunch and a town hall.">
 
 ## How it works
 
-- **Add all your tasks for the day.** Add each task and how long you think it
-  will take.
-- **Add a priority to each task with one click.** Choose red, orange or yellow
-  to mark how urgent each task is, then click Add. Pomodoro puts the most urgent
-  tasks first.
-- **We work out the intervals.** Pomodoro splits your tasks into focus blocks,
-  with short breaks between them and a longer one after every fourth. Click a
-  task to see its individual blocks.
-- **We fit our timings around your schedule.** You connect your calendar and we
-  work out the rest using your Mac calendar (iCloud, Google, Outlook, Exchange
-  and more).
-- **Keep your timer close.** Fold away the task list to keep just the timer and
-  controls open. Your current task and time remaining stay in the menu bar.
+1. **Add all your tasks for the day.**
+2. **Add a priority to each task with one click.**
+3. **We work out the intervals.**
+4. **We fit our timings around your schedule.**
+5. **Keep your timer close.**
 
 ## Features
 
-- Tick tasks off like a to-do list. Finish early and the next task moves
-  straight into your time.
-- The time left on your current block is right there in the menu bar, with a
-  heads-up when a meeting is about to start.
-- Start, pause or reset in one click, or jump straight to any block.
-- Set your own block and break lengths and when your day starts.
-- Built for macOS, in Light and Dark mode.
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Tick tasks off like a to-do list. Finish early and the next task starts straight away.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Priority labels that automatically rearrange your tasks into the most urgent first.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Integrated with Mac calendars with one click.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Set your own block and break lengths and when your day starts.
+
+<img src="docs/screenshots/tick.svg" width="15" height="12" alt="✓">&nbsp; Built for macOS, in Light and Dark mode.
 
 ## Privacy
 
