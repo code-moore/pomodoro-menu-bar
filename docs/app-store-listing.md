@@ -24,7 +24,7 @@ Plan your day around focus. Pomodoro lives in your Mac's menu bar and turns your
 
 • Add a task and how long it should take. Pomodoro splits it into focus blocks, with short breaks between them and a longer one after every fourth.
 • Mark how urgent each task is, red, orange or yellow, and the plan puts the most urgent first.
-• Tick tasks off like a to-do list. Finish early and the next task moves straight into your time.
+• Tick tasks off like a to-do list. Finish early and the next task starts straight away.
 • Your meetings are already in it. Pomodoro reads today's events from the calendars on your Mac (iCloud, Google, Outlook, Exchange and more) and schedules your work around them. Declined invites don't count, and you choose which calendars do.
 • The time left on your current block is right there in the menu bar, with a heads-up when a meeting is about to start.
 • Start, pause or reset in one click, or jump straight to any block.
