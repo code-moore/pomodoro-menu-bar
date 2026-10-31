@@ -12,7 +12,12 @@ SPARKLE_ACCOUNT="${SPARKLE_ACCOUNT:-com.codemoore.pomodoro.menubar}"
 
 # Where Sparkle looks for the update feed. Override per release:
 #   APPCAST_URL=https://your.site/appcast.xml ./build.sh
-APPCAST_URL="${APPCAST_URL:-$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' Resources/Info.plist)}"
+# Only a release defaults to the official feed: on any other build, an update
+# would replace a local or forked app with the official one.
+APPCAST_URL="${APPCAST_URL:-}"
+if [ -z "$APPCAST_URL" ] && [ "$RELEASE_BUILD" = 1 ]; then
+  APPCAST_URL="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' Resources/Info.plist)"
+fi
 
 # A running instance keeps the OLD executable and Info.plist in memory, and
 # `open` will merely focus it rather than launching the new bundle — so a
@@ -125,9 +130,15 @@ fi
 
 echo "==> Embedding Sparkle.framework"
 cp -R "$SPARKLE_FW" "$APP/Contents/Frameworks/"
+# Sparkle's license requires its notice to ship with every copy.
+cp .build/artifacts/sparkle/Sparkle/LICENSE "$APP/Contents/Resources/Sparkle-LICENSE.txt"
 
 # --- Update feed settings ----------------------------------------------------
-/usr/libexec/PlistBuddy -c "Set :SUFeedURL $APPCAST_URL" "$APP/Contents/Info.plist"
+if [ -n "$APPCAST_URL" ]; then
+  /usr/libexec/PlistBuddy -c "Set :SUFeedURL $APPCAST_URL" "$APP/Contents/Info.plist"
+else
+  /usr/libexec/PlistBuddy -c 'Delete :SUFeedURL' "$APP/Contents/Info.plist"
+fi
 
 # The public half of the update signing key. Prefer the local key file written
 # by ./setup-sparkle-key.sh; fall back to Sparkle's Keychain lookup.
