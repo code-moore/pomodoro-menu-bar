@@ -146,6 +146,48 @@ final class ReleaseScriptTests: XCTestCase {
         XCTAssertEqual(result.output, "v1.10.0\n")
     }
 
+    func testSourceReleasePublishesOnceToTheSourceRepository() throws {
+        let script = try source("Tools/ci-publish.sh")
+        let start = try XCTUnwrap(script.range(of: "publish_source_release() {"))
+        let end = try XCTUnwrap(script.range(of: "\n}\n", range: start.upperBound..<script.endIndex))
+        let function = String(script[start.lowerBound..<end.upperBound])
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        func run(whenViewed view: String) throws -> (status: Int32, output: String) {
+            try ScriptTestSupport.snippet("""
+                cd '\(directory.path)'
+                mkdir -p releases
+                rm -f calls.txt
+                echo archive > releases/Pomodoro-1.7.6.dmg
+                SOURCE=owner/app TAG=v1.7.6 VERSION=1.7.6 DMG=Pomodoro-1.7.6.dmg GITHUB_SHA=abc
+                sha256sum() { shasum -a 256 "$@"; }
+                newest_tag() { echo v1.7.6; }
+                gh() {
+                  echo "$*" >> calls.txt
+                  case "$1 $2" in
+                    'release view') \(view) ;;
+                    'release download') cp releases/SHA256SUMS.txt "${@: -1}/" ;;
+                  esac
+                }
+                \(function)
+                publish_source_release
+                cat calls.txt
+                """)
+        }
+
+        let new = try run(whenViewed: "return 1")
+        XCTAssertEqual(new.status, 0, new.output)
+        XCTAssertTrue(new.output.contains("release create v1.7.6 -R owner/app --target abc --draft"), new.output)
+        XCTAssertTrue(new.output.contains("release edit v1.7.6 -R owner/app --draft=false --latest=true"), new.output)
+
+        // A retry after a later step failed must not touch the public release.
+        let published = try run(whenViewed: "echo '{\"isDraft\": false}'")
+        XCTAssertEqual(published.status, 0, published.output)
+        XCTAssertFalse(published.output.contains("release upload"), published.output)
+    }
+
     func testWebsitePublicationResumesItsPRWithoutPushingMasterOrRewritingHistory() throws {
         let script = try source("Tools/ci-publish.sh")
         let start = try XCTUnwrap(script.range(of: "export GH_TOKEN=\"$GH_WEBSITE_TOKEN\""))
