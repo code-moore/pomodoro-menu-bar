@@ -121,7 +121,7 @@ git tag v1.8.0 <commit>
 git push origin v1.8.0
 ```
 
-The workflow refuses a tag that isn't on main. It builds that version with a timestamp build number, signs and notarizes it, then publishes it to the source and `code-moore/pomodoro-menu-bar` download repositories. The organisation uses the stable asset name `Pomodoro-macos.dmg`.
+The workflow refuses a tag that isn't on main. It builds that version with a timestamp build number, signs and notarizes it, then publishes it to the releases of `code-moore/pomodoro-menu-bar`.
 
 The same verified DMG and signed appcast are committed to the `release/pomodoro-v<version>` branch in `msmfa/quiet-pomodoro`, updating `MAC_VERSION`. After the website build passes, the workflow opens a pull request into master and merges it with the website token, using the private noreply author address. It does not push directly to master or bypass branch protection. The website branch requires a pull request, with zero required approvals and no required checks. Its existing Cloudflare deployment makes the website download buttons and installed-app feed current. An older tag never replaces the website. Published archives are immutable.
 
@@ -129,6 +129,6 @@ If publishing fails partway, use "Re-run failed jobs", which reuses the built ar
 
 Both release jobs use the `release` GitHub environment. Configure it to require your approval and to deploy only from `v*` tags, so nothing signed reaches installed apps without a review.
 
-Required `release` environment secrets: `DEVELOPER_ID_P12_BASE64`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_PRIVATE_KEY`, and the original `SPARKLE_PRIVATE_KEY`. Publishing uses `CODE_MOORE_RELEASE_TOKEN` (Contents read/write only in `code-moore/pomodoro-menu-bar`) and `WEBSITE_RELEASE_TOKEN` (Contents read/write and Pull requests read/write only in `msmfa/quiet-pomodoro`). Keep these encrypted in GitHub, and renew expiring credentials before expiry.
+Required `release` environment secrets: `DEVELOPER_ID_P12_BASE64`, `DEVELOPER_ID_P12_PASSWORD`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_PRIVATE_KEY`, and the original `SPARKLE_PRIVATE_KEY`. Publishing uses `WEBSITE_RELEASE_TOKEN` (Contents read/write and Pull requests read/write only in `msmfa/quiet-pomodoro`). Keep these encrypted in GitHub, and renew expiring credentials before expiry.
 
-The configured organisation publishing credential expires on 31 October 2027. The website publishing credential expires on 29 January 2027 and must be renewed before then. Apple credentials and the original Sparkle update-signing key are configured as encrypted GitHub secrets.
+The website publishing credential expires on 29 January 2027 and must be renewed before then. Apple credentials and the original Sparkle update-signing key are configured as encrypted GitHub secrets.
