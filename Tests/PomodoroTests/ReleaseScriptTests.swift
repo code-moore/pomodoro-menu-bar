@@ -145,4 +145,119 @@ final class ReleaseScriptTests: XCTestCase {
         XCTAssertEqual(result.status, 0, result.output)
         XCTAssertEqual(result.output, "v1.10.0\n")
     }
+
+    func testWebsitePublicationResumesItsPRWithoutPushingMasterOrRewritingHistory() throws {
+        let script = try source("Tools/ci-publish.sh")
+        let start = try XCTUnwrap(script.range(of: "export GH_TOKEN=\"$GH_WEBSITE_TOKEN\""))
+        let publish = String(script[start.lowerBound...])
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let fixture = try ScriptTestSupport.snippet("""
+            cd '\(directory.path)'
+            git init --quiet --bare --initial-branch=master remote.git
+            git init --quiet --initial-branch=master seed
+            git -C seed config user.name Test
+            git -C seed config user.email test@example.com
+            mkdir -p seed/site/dist/downloads/mac seed/site/scripts releases
+            echo old-feed > seed/site/dist/downloads/mac/appcast.xml
+            echo "export const MAC_VERSION = '1.7.5';" > seed/site/scripts/mac-release.mjs
+            git -C seed add .
+            git -C seed commit --quiet -m Initial
+            git -C seed remote add origin "$PWD/remote.git"
+            git -C seed push --quiet origin master
+            echo verified-archive > releases/Pomodoro-1.7.6.dmg
+            echo verified-checksum > releases/Pomodoro-1.7.6.dmg.sha256
+            echo signed-feed > releases/appcast.xml
+            """)
+        XCTAssertEqual(fixture.status, 0, fixture.output)
+
+        // Only GitHub and npm are simulated. Real shallow clones, commits,
+        // branch pushes and merges exercise the failed-job retry path.
+        let setup = """
+            cd '\(directory.path)'
+            REMOTE="$PWD/remote.git" LOG="$PWD/calls.log" PR_STATE="$PWD/open-pr"
+            export GITHUB_STEP_SUMMARY="$PWD/summary"
+            GH_WEBSITE_TOKEN=website-test WEBSITE=test/website
+            VERSION=1.7.6 TAG=v1.7.6 DMG=Pomodoro-1.7.6.dmg GITHUB_SHA=source-test
+            git() {
+              local argument
+              for argument in "$@"; do
+                if [ "$argument" = push ]; then
+                  echo "git $*" >> "$LOG"
+                  [[ "${!#}" = HEAD:refs/heads/release/pomodoro-v1.7.6 ]]
+                  [[ " $* " != *' --force'* ]]
+                fi
+              done
+              command git "$@"
+            }
+            npm() { echo "npm $*" >> "$LOG"; }
+            gh() {
+              test "$GH_TOKEN" = website-test
+              echo "gh $*" >> "$LOG"
+              case "$1 $2" in
+                'repo clone') command git clone --quiet --depth 1 --branch master "file://$REMOTE" website ;;
+                'pr list') if [ -f "$PR_STATE" ]; then cat "$PR_STATE"; fi ;;
+                'pr create')
+                  test -s releases/website-pr.md
+                  echo 42 > "$PR_STATE"
+                  echo https://github.com/test/website/pull/42
+                  ;;
+                'pr merge')
+                  test "$3" = 42
+                  [[ " $* " = *' --merge '* ]]
+                  [[ " $* " = *' --author-email 59375712+msmfa@users.noreply.github.com '* ]]
+                  [[ " $* " != *' --admin '* ]]
+                  local head
+                  head="$(command git -C website rev-parse HEAD)"
+                  [[ "$*" = *"--match-head-commit $head" ]]
+                  if [ "$REJECT_MERGE" = 1 ]; then return 1; fi
+                  command git -C "$REMOTE" update-ref refs/heads/master "$head"
+                  rm "$PR_STATE"
+                  ;;
+                *) return 1 ;;
+              esac
+            }
+
+            """
+
+        let rejected = try ScriptTestSupport.snippet(setup + "REJECT_MERGE=1\n" + publish)
+        XCTAssertNotEqual(rejected.status, 0, rejected.output)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("summary").path))
+
+        // Master advances while the published branch and open PR remain.
+        let advance = try ScriptTestSupport.snippet("""
+            cd '\(directory.path)'
+            git --git-dir=remote.git show master:site/scripts/mac-release.mjs | grep "1.7.5"
+            git --git-dir=remote.git rev-parse refs/heads/release/pomodoro-v1.7.6 > first-head
+            echo keep-this-change > seed/unrelated.txt
+            git -C seed add unrelated.txt
+            git -C seed commit --quiet -m 'Unrelated website change'
+            git -C seed push --quiet origin master
+            rm -rf website
+            """)
+        XCTAssertEqual(advance.status, 0, advance.output)
+
+        let resumed = try ScriptTestSupport.snippet(setup + "REJECT_MERGE=0\n" + publish)
+        XCTAssertEqual(resumed.status, 0, resumed.output)
+        let verify = try ScriptTestSupport.snippet("""
+            cd '\(directory.path)'
+            git --git-dir=remote.git merge-base --is-ancestor "$(cat first-head)" master
+            git --git-dir=remote.git show master:site/scripts/mac-release.mjs | grep "1.7.6"
+            git --git-dir=remote.git show master:unrelated.txt | grep keep-this-change
+            git --git-dir=remote.git show master:site/dist/downloads/mac/Pomodoro-1.7.6.dmg | cmp - releases/Pomodoro-1.7.6.dmg
+            rm -rf website
+            """)
+        XCTAssertEqual(verify.status, 0, verify.output)
+
+        let alreadyPublished = try ScriptTestSupport.snippet(setup + "REJECT_MERGE=0\n" + publish)
+        XCTAssertEqual(alreadyPublished.status, 0, alreadyPublished.output)
+        let calls = try String(contentsOf: directory.appendingPathComponent("calls.log"), encoding: .utf8)
+            .split(separator: "\n")
+        XCTAssertEqual(calls.filter { $0.hasPrefix("gh pr create ") }.count, 1)
+        XCTAssertEqual(calls.filter { $0.hasPrefix("gh pr merge ") }.count, 2)
+        XCTAssertEqual(calls.filter { $0.hasPrefix("git ") }.count, 2)
+        XCTAssertEqual(calls.filter { $0 == "npm run build:ci" }.count, 3)
+    }
 }

@@ -60,6 +60,20 @@ if [ "$(newest_tag)" != "$TAG" ]; then
 fi
 export GH_TOKEN="$GH_WEBSITE_TOKEN"
 gh repo clone "$WEBSITE" website -- --depth 1 --branch master
+WEBSITE_BRANCH="release/pomodoro-$TAG"
+website_git() {
+  git -C website -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+    -c credential.helper= -c 'credential.helper=!gh auth git-credential' "$@"
+}
+# Resume a partially published website PR without rewriting its history.
+existing_branch="$(website_git ls-remote --heads origin "refs/heads/$WEBSITE_BRANCH")"
+if [ -n "$existing_branch" ]; then
+  website_git fetch --unshallow origin "master:refs/remotes/origin/master" "$WEBSITE_BRANCH:refs/remotes/origin/$WEBSITE_BRANCH"
+  website_git switch -c "$WEBSITE_BRANCH" "origin/$WEBSITE_BRANCH"
+  website_git merge --no-edit origin/master
+else
+  website_git switch -c "$WEBSITE_BRANCH"
+fi
 DEST=website/site/dist/downloads/mac
 if [ -e "$DEST/$DMG" ]; then
   cmp "releases/$DMG" "$DEST/$DMG"
@@ -76,9 +90,23 @@ assert n==1
 p.write_text(s)
 PY
 (cd website/site && npm ci && npm run build:ci)
-git -C website add site/dist/downloads/mac site/scripts/mac-release.mjs
-if ! git -C website diff --cached --quiet; then
-  git -C website -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m "Publish Pomodoro $VERSION from $GITHUB_SHA"
-  git -C website -c credential.helper= -c 'credential.helper=!gh auth git-credential' push origin master
+website_git add site/dist/downloads/mac site/scripts/mac-release.mjs
+if ! website_git diff --cached --quiet; then
+  website_git commit -m "Publish Pomodoro $VERSION from $GITHUB_SHA"
+fi
+if ! website_git diff --quiet origin/master HEAD; then
+  website_git push origin "HEAD:refs/heads/$WEBSITE_BRANCH"
+  WEBSITE_PR="$(gh pr list -R "$WEBSITE" --base master --head "$WEBSITE_BRANCH" --state open --json number --jq '.[0].number // empty')"
+  if [ -z "$WEBSITE_PR" ]; then
+    cat > releases/website-pr.md <<NOTES
+Publish the verified Pomodoro $VERSION archive, checksum and signed update feed from source commit $GITHUB_SHA, and update MAC_VERSION.
+
+Validation: the website build passed with npm run build:ci. Merging deploys through the existing Cloudflare build.
+NOTES
+    WEBSITE_PR="$(gh pr create -R "$WEBSITE" --base master --head "$WEBSITE_BRANCH" --title "Publish Pomodoro $VERSION" --body-file releases/website-pr.md)"
+    WEBSITE_PR="${WEBSITE_PR##*/}"
+  fi
+  gh pr merge "$WEBSITE_PR" -R "$WEBSITE" --merge --author-email 59375712+msmfa@users.noreply.github.com \
+    --match-head-commit "$(website_git rev-parse HEAD)"
 fi
 printf 'Published Pomodoro %s from %s. Website deployment follows its existing Cloudflare build.\n' "$VERSION" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
