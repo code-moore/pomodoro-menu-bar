@@ -1,0 +1,109 @@
+name: Prepare existing Apple credentials for release environment
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: prepare-release-notary-credentials
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - name: Install pinned encryption tools before loading credentials
+        run: |
+          python3 -m venv "$RUNNER_TEMP/seal-env"
+          "$RUNNER_TEMP/seal-env/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: PyNaCl==1.6.2 cffi==2.1.1 pycparser==3.12
+      - name: Validate original Apple credentials and encrypt for the release environment
+        env:
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          NOTARY_PRIVATE_KEY: ${{ secrets.NOTARY_PRIVATE_KEY }}
+        run: |
+          "$RUNNER_TEMP/seal-env/bin/python" - <<'PY'
+          import base64
+          import json
+          import os
+          import re
+          import subprocess
+          import tempfile
+          import uuid
+          from pathlib import Path
+
+          from nacl.encoding import Base64Encoder
+          from nacl.public import PublicKey, SealedBox
+
+
+          PUBLIC_KEY = "a0jgARBzff5hMRtv6WgpXuVjXppeHNRnEmdIppRST3k="
+          KEY_ID = "3380204578043523366"
+          NAMES = ("NOTARY_KEY_ID", "NOTARY_ISSUER_ID", "NOTARY_PRIVATE_KEY")
+
+
+          def verify_with_apple(values):
+              if not re.fullmatch(r"[A-Z0-9]{10}", values["NOTARY_KEY_ID"]):
+                  raise ValueError("Stored NOTARY_KEY_ID has an unexpected format.")
+              try:
+                  uuid.UUID(values["NOTARY_ISSUER_ID"])
+              except ValueError:
+                  raise ValueError("Stored NOTARY_ISSUER_ID has an unexpected format.") from None
+              if not values["NOTARY_PRIVATE_KEY"].strip().startswith("-----BEGIN PRIVATE KEY-----"):
+                  raise ValueError("Stored NOTARY_PRIVATE_KEY has an unexpected format.")
+              with tempfile.TemporaryDirectory(dir=os.environ["RUNNER_TEMP"]) as folder:
+                  key_file = Path(folder) / "notary-key.p8"
+                  key_file.write_text(values["NOTARY_PRIVATE_KEY"])
+                  key_file.chmod(0o600)
+                  result = subprocess.run(
+                      ["xcrun", "notarytool", "history", "--key", str(key_file),
+                       "--key-id", values["NOTARY_KEY_ID"], "--issuer", values["NOTARY_ISSUER_ID"],
+                       "--output-format", "json"],
+                      capture_output=True, timeout=120,
+                  )
+                  if result.returncode:
+                      # Do not print Apple output: it can contain credential identifiers.
+                      raise RuntimeError("Apple credential validation failed; no secrets were exported.")
+
+
+          def seal(values, public_key=PUBLIC_KEY):
+              box = SealedBox(PublicKey(public_key, encoder=Base64Encoder))
+              return {name: base64.b64encode(box.encrypt(values[name].encode())).decode() for name in NAMES}
+
+
+          def main():
+              os.umask(0o077)
+              values = {name: os.environ.get(name, "") for name in NAMES}
+              if not all(values.values()):
+                  raise ValueError("A required repository credential is missing.")
+              verify_with_apple(values)
+              Path("sealed-notary.json").write_text(json.dumps({"key_id": KEY_ID, "secrets": seal(values)}))
+              print("Apple accepted the saved API credentials. Three credentials encrypted for the release environment.")
+
+
+          if __name__ == "__main__":
+              try:
+                  main()
+              except Exception as error:
+                  # Only fixed messages; never display an exception containing arguments or credentials.
+                  if isinstance(error, (ValueError, RuntimeError)) and str(error) in {
+                      "Stored NOTARY_KEY_ID has an unexpected format.",
+                      "Stored NOTARY_ISSUER_ID has an unexpected format.",
+                      "Stored NOTARY_PRIVATE_KEY has an unexpected format.",
+                      "A required repository credential is missing.",
+                      "Apple credential validation failed; no secrets were exported.",
+                  }:
+                      print(str(error))
+                  else:
+                      print("Credential preparation failed; private diagnostic output was suppressed.")
+                  raise SystemExit(1)
+          PY
+      - name: Retain only ciphertext encrypted to the release environment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-notary-sealed
+          path: sealed-notary.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Remove local ciphertext
+        if: always()
+        run: rm -f sealed-notary.json
