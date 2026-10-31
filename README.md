@@ -2,9 +2,7 @@
 
 Plan your day from your Mac menu bar
 
-<p align="center">
-  <img src="docs/screenshots/banner.png" width="560" alt="QPT's menu bar panel, with a 25:00 timer and five tasks fitted around a standup, lunch and a town hall.">
-</p>
+<img src="docs/screenshots/banner.png" width="100%" alt="QPT's menu bar panel open over a Mac calendar, with a 25:00 timer and five tasks fitted around a standup, lunch and a town hall.">
 
 ## How it works
 
