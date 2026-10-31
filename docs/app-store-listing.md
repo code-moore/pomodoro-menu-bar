@@ -6,6 +6,7 @@ Character limits are App Store Connect's; every field below fits.
 
 Pick one, or your own:
 
+- **QPT** (3)
 - **Pomodoro Day Planner** (20)
 - **Quiet Pomodoro Planner** (22), if the Quiet Pomodoro brand and icon carry over
 - **Menu Bar Pomodoro Planner** (25)
@@ -20,12 +21,12 @@ Turn your to-do list into a day of focus blocks and breaks, fitted around your m
 
 ## Description
 
-Plan your day around focus. Pomodoro lives in your Mac's menu bar and turns your to-do list into a timeline of focus blocks and breaks, fitted around your meetings.
+Plan your day around focus. QPT lives in your Mac's menu bar and turns your to-do list into a timeline of focus blocks and breaks, fitted around your meetings.
 
-• Add a task and how long it should take. Pomodoro splits it into focus blocks, with short breaks between them and a longer one after every fourth.
+• Add a task and how long it should take. QPT splits it into focus blocks, with short breaks between them and a longer one after every fourth.
 • Mark how urgent each task is, red, orange or yellow, and the plan puts the most urgent first.
 • Tick tasks off like a to-do list. Finish early and the next task starts straight away.
-• Your meetings are already in it. Pomodoro reads today's events from the calendars on your Mac (iCloud, Google, Outlook, Exchange and more) and schedules your work around them. Declined invites don't count, and you choose which calendars do.
+• Your meetings are already in it. QPT reads today's events from the calendars on your Mac (iCloud, Google, Outlook, Exchange and more) and schedules your work around them. Declined invites don't count, and you choose which calendars do.
 • The time left on your current block is right there in the menu bar, with a heads-up when a meeting is about to start.
 • Start, pause or reset in one click, or jump straight to any block.
 • Set your own block and break lengths and when your day starts.

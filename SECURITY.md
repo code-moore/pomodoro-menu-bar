@@ -1,6 +1,6 @@
 # Security
 
-Pomodoro installs its own updates, so please report vulnerabilities privately
+QPT installs its own updates, so please report vulnerabilities privately
 rather than in a public issue.
 
 Use [private vulnerability reporting](https://github.com/msmfa/pomodoro-menu-bar/security/advisories/new)
